@@ -2,8 +2,6 @@ using MongoDB.Driver;
 using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
-using Microsoft.OpenApi.Models;
-using System.Reflection;
 
 // 🔹 Cargar archivo .env antes de crear el builder
 DotNetEnv.Env.Load(); 
@@ -15,47 +13,30 @@ builder.Configuration.AddEnvironmentVariables();
 
 // === CONFIGURACIÓN DE SERVICIOS ===
 
-// Swagger / OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "RealEstate API",
-        Version = "v1",
-        Description = "API para gestionar propiedades inmobiliarias"
-    });
-
-    // Configuración para leer comentarios XML
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
-});
-
 // Controladores
 builder.Services.AddControllers();
 
 // Caché en memoria
 builder.Services.AddMemoryCache();
 
-// Servicio de Propiedades, pasando IConfiguration y IMemoryCache
+// Servicio de Propiedades
 builder.Services.AddSingleton<PropertyService>(sp =>
 {
     var cache = sp.GetRequiredService<IMemoryCache>();
     return new PropertyService(builder.Configuration, cache);
 });
 
-// === CORS (para permitir peticiones desde el frontend) ===
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
             .WithOrigins(
-                "http://localhost:3000",   // React
-                "https://localhost:3000",  // React HTTPS
-                "http://localhost:5173",   // Vite
-                "https://localhost:5173"   // Vite HTTPS
+                "http://localhost:3000",
+                "https://localhost:3000",
+                "http://localhost:5173",
+                "https://localhost:5173"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -66,20 +47,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // === PIPELINE ===
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RealEstate API V1");
-    c.RoutePrefix = string.Empty; // Swagger en la raíz
-});
-
 
 app.UseHttpsRedirection();
-
-// Activar CORS
 app.UseCors("AllowFrontend");
 
-// === MIDDLEWARE GLOBAL DE ERRORES ===
+// Middleware global de errores
 app.Use(async (context, next) =>
 {
     try
@@ -89,7 +61,7 @@ app.Use(async (context, next) =>
     catch (MongoConnectionException ex)
     {
         context.Response.StatusCode = 503;
-        await context.Response.WriteAsJsonAsync(new { error = "No se pudo conectar a la base de datos MongoDB", detail = ex.Message });
+        await context.Response.WriteAsJsonAsync(new { error = "No se pudo conectar a MongoDB", detail = ex.Message });
     }
     catch (FormatException ex)
     {
@@ -103,7 +75,7 @@ app.Use(async (context, next) =>
     }
 });
 
-// === ENDPOINTS CONTROLADOS ===
+// Mapear controladores
 app.MapControllers();
 
 app.Run();

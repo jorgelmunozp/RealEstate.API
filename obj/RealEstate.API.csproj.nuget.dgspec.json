@@ -48,10 +48,6 @@
               "target": "Package",
               "version": "[3.1.1, )"
             },
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[9.0.9, )"
-            },
             "Microsoft.Extensions.Configuration": {
               "target": "Package",
               "version": "[9.0.10, )"
@@ -59,10 +55,6 @@
             "MongoDB.Driver": {
               "target": "Package",
               "version": "[3.5.0, )"
-            },
-            "Swashbuckle.AspNetCore": {
-              "target": "Package",
-              "version": "[6.6.2, )"
             }
           },
           "imports": [

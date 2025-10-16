@@ -51,18 +51,13 @@ D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.r
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.pdb
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\DnsClient.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Configuration.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Abstractions.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.OpenApi.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Bson.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Driver.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\SharpCompress.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Snappier.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\ZstdSharp.dll
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.csproj.AssemblyReference.cache
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\rpswa.dswa.cache.json
@@ -70,7 +65,6 @@ D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.G
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.AssemblyInfoInputs.cache
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.AssemblyInfo.cs
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.csproj.CoreCompileInputs.cache
-D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.MvcApplicationPartsAssemblyInfo.cs
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.MvcApplicationPartsAssemblyInfo.cache
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.sourcelink.json
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\rjimswa.dswa.cache.json
@@ -89,5 +83,3 @@ D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.g
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\ref\RealEstate.API.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\DotNetEnv.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Sprache.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.xml
-D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.xml
