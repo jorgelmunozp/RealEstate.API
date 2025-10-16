@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Services;
 using RealEstate.API.Models;
+using RealEstate.API.Dtos;
 
 namespace RealEstate.API.Controllers
 {
@@ -31,25 +32,52 @@ namespace RealEstate.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var property = await _service.GetByIdAsync(id);
-            return property != null ? Ok(property) : NotFound(new { message = "Propiedad no encontrada" });
+            var dto = await _service.GetByIdAsync(id);
+            if (dto == null)
+                return NotFound(new { message = "Propiedad no encontrada" });
+            return Ok(dto);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Property property)
+        public async Task<IActionResult> Create([FromBody] PropertyDto dto)
         {
-            if (property == null)
+            if (dto == null)
                 return BadRequest(new { message = "Propiedad inválida" });
+
+            var property = new Property
+            {
+                IdOwner = dto.IdOwner,
+                Name = dto.Name,
+                AddressProperty = dto.AddressProperty,
+                PriceProperty = dto.PriceProperty,
+                ImageUrl = dto.ImageUrl
+            };
 
             var created = await _service.CreateAsync(property);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] Property property)
+        public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
+            if (dto == null)
+                return BadRequest(new { message = "Propiedad inválida" });
+
+            var property = new Property
+            {
+                Id = dto.Id,
+                IdOwner = dto.IdOwner,
+                Name = dto.Name,
+                AddressProperty = dto.AddressProperty,
+                PriceProperty = dto.PriceProperty,
+                ImageUrl = dto.ImageUrl
+            };
+
             var updated = await _service.UpdateAsync(id, property);
-            return updated ? Ok(updated) : NotFound(new { message = "Propiedad no encontrada" });
+            if (updated == null)
+                return NotFound(new { message = "Propiedad no encontrada" });
+
+            return Ok(updated);
         }
 
         [HttpDelete("{id}")]

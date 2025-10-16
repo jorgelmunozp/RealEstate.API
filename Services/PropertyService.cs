@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using RealEstate.API.Models;
+using RealEstate.API.Dtos;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace RealEstate.API.Services
@@ -13,7 +14,6 @@ namespace RealEstate.API.Services
         {
             _cache = cache;
 
-            // 🔹 Obtener valores desde IConfiguration
             var connectionString = config["MONGO_CONNECTION"] 
                                    ?? throw new Exception("MONGO_CONNECTION no definida");
             var databaseName = config["MONGO_DATABASE"] 
@@ -25,7 +25,7 @@ namespace RealEstate.API.Services
             var database = client.GetDatabase(databaseName);
             _properties = database.GetCollection<Property>(collectionName);
 
-            // 🔹 Crear índices para mejorar rendimiento
+            // Crear índices
             _properties.Indexes.CreateOne(
                 new CreateIndexModel<Property>(
                     Builders<Property>.IndexKeys
@@ -36,14 +36,13 @@ namespace RealEstate.API.Services
             );
         }
 
-        // 🔹 Cache + paginación + metadatos
+        // Cache + paginación + metadatos
         public async Task<object> GetCachedAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
 
             var cacheKey = $"{name}-{address}-{minPrice}-{maxPrice}-{page}-{limit}";
-
             if (_cache.TryGetValue(cacheKey, out object cached))
                 return cached;
 
@@ -62,8 +61,8 @@ namespace RealEstate.API.Services
             return result;
         }
 
-        // 🔹 Filtros + paginación + conteo total
-        public async Task<(List<Property> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
+        // Filtros + paginación + conteo total
+        public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
@@ -73,42 +72,42 @@ namespace RealEstate.API.Services
 
             if (!string.IsNullOrEmpty(name))
                 filters.Add(filterBuilder.Regex(nameof(Property.Name), new MongoDB.Bson.BsonRegularExpression(name, "i")));
-
             if (!string.IsNullOrEmpty(address))
                 filters.Add(filterBuilder.Regex(nameof(Property.AddressProperty), new MongoDB.Bson.BsonRegularExpression(address, "i")));
-
             if (minPrice.HasValue)
                 filters.Add(filterBuilder.Gte(nameof(Property.PriceProperty), minPrice.Value));
-
             if (maxPrice.HasValue)
                 filters.Add(filterBuilder.Lte(nameof(Property.PriceProperty), maxPrice.Value));
 
             var filter = filters.Count > 0 ? filterBuilder.And(filters) : FilterDefinition<Property>.Empty;
 
             var totalItems = await _properties.CountDocumentsAsync(filter);
-
-            var data = await _properties
+            var dataEntities = await _properties
                 .Find(filter)
                 .Skip((page - 1) * limit)
                 .Limit(limit)
                 .ToListAsync();
 
-            return (data, totalItems);
+            var dataDtos = dataEntities.Select(MapToDto).ToList();
+            return (dataDtos, totalItems);
         }
 
-        public async Task<Property?> GetByIdAsync(string id) =>
-            await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+        public async Task<PropertyDto?> GetByIdAsync(string id)
+        {
+            var property = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+            return property != null ? MapToDto(property) : null;
+        }
 
-        public async Task<Property> CreateAsync(Property property)
+        public async Task<PropertyDto> CreateAsync(Property property)
         {
             await _properties.InsertOneAsync(property);
-            return property;
+            return MapToDto(property);
         }
 
-        public async Task<bool> UpdateAsync(string id, Property property)
+        public async Task<PropertyDto?> UpdateAsync(string id, Property property)
         {
             var result = await _properties.ReplaceOneAsync(p => p.Id == id, property);
-            return result.ModifiedCount > 0;
+            return result.ModifiedCount > 0 ? MapToDto(property) : null;
         }
 
         public async Task<bool> DeleteAsync(string id)
@@ -122,5 +121,16 @@ namespace RealEstate.API.Services
             var count = await _properties.CountDocumentsAsync(p => p.Id == id);
             return count > 0;
         }
+
+        // Mapeo Property → DTO
+        private static PropertyDto MapToDto(Property property) => new PropertyDto
+        {
+            Id = property.Id,
+            IdOwner = property.IdOwner,
+            Name = property.Name,
+            AddressProperty = property.AddressProperty,
+            PriceProperty = property.PriceProperty,
+            ImageUrl = property.ImageUrl
+        };
     }
 }
