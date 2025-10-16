@@ -2,6 +2,10 @@ using MongoDB.Driver;
 using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
+using RealEstate.API.Middleware;
+using FluentValidation.AspNetCore;
+using AutoMapper; // <- Asegúrate de importar AutoMapper
+using RealEstate.API.Mappings; // <- Importa tu MappingProfile
 
 // 🔹 Cargar archivo .env antes de crear el builder
 DotNetEnv.Env.Load(); 
@@ -13,8 +17,9 @@ builder.Configuration.AddEnvironmentVariables();
 
 // === CONFIGURACIÓN DE SERVICIOS ===
 
-// Controladores
-builder.Services.AddControllers();
+// Controladores con FluentValidation
+builder.Services.AddControllers()
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>());
 
 // Caché en memoria
 builder.Services.AddMemoryCache();
@@ -25,6 +30,9 @@ builder.Services.AddSingleton<PropertyService>(sp =>
     var cache = sp.GetRequiredService<IMemoryCache>();
     return new PropertyService(builder.Configuration, cache);
 });
+
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(MappingProfile)); // <- Línea agregada
 
 // CORS
 builder.Services.AddCors(options =>
@@ -51,29 +59,8 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
-// Middleware global de errores
-app.Use(async (context, next) =>
-{
-    try
-    {
-        await next();
-    }
-    catch (MongoConnectionException ex)
-    {
-        context.Response.StatusCode = 503;
-        await context.Response.WriteAsJsonAsync(new { error = "No se pudo conectar a MongoDB", detail = ex.Message });
-    }
-    catch (FormatException ex)
-    {
-        context.Response.StatusCode = 400;
-        await context.Response.WriteAsJsonAsync(new { error = "Formato de datos inválido", detail = ex.Message });
-    }
-    catch (Exception ex)
-    {
-        context.Response.StatusCode = 500;
-        await context.Response.WriteAsJsonAsync(new { error = "Error interno del servidor", detail = ex.Message });
-    }
-});
+// Middleware global de errores (centralizado)
+app.UseMiddleware<ErrorHandlerMiddleware>();
 
 // Mapear controladores
 app.MapControllers();

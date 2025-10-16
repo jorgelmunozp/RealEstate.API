@@ -16,6 +16,7 @@ namespace RealEstate.API.Controllers
             _service = service;
         }
 
+        // GET: api/Property
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? name,
@@ -29,48 +30,92 @@ namespace RealEstate.API.Controllers
             return Ok(result);
         }
 
+        // GET: api/Property/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
             var dto = await _service.GetByIdAsync(id);
             if (dto == null)
                 return NotFound(new { message = "Propiedad no encontrada" });
+            
             return Ok(dto);
         }
 
+        // POST: api/Property
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PropertyDto dto)
         {
-            if (dto == null)
-                return BadRequest(new { message = "Propiedad inválida" });
-
+            // Map manual DTO -> Modelo
             var property = new Property
             {
-                IdOwner = dto.IdOwner,
+                IdProperty = dto.IdProperty,
                 Name = dto.Name,
-                AddressProperty = dto.AddressProperty,
-                PriceProperty = dto.PriceProperty,
-                ImageUrl = dto.ImageUrl
+                Address = dto.Address,
+                Price = dto.Price,
+                CodeInternal = dto.CodeInternal,
+                Year = dto.Year,
+                Owner = dto.Owner != null ? new Owner
+                {
+                    IdOwner = dto.Owner.IdOwner,
+                    Name = dto.Owner.Name,
+                    Address = dto.Owner.Address,
+                    Photo = dto.Owner.Photo,
+                    Birthday = dto.Owner.Birthday
+                } : null,
+                Images = dto.Images?.Select(img => new PropertyImage
+                {
+                    IdPropertyImage = img.IdPropertyImage,
+                    File = img.File,
+                    Enabled = img.Enabled
+                }).ToList(),
+                Traces = dto.Traces?.Select(trace => new PropertyTrace
+                {
+                    IdPropertyTrace = trace.IdPropertyTrace,
+                    DateSale = trace.DateSale,
+                    Name = trace.Name,
+                    Value = trace.Value,
+                    Tax = trace.Tax
+                }).ToList()
             };
 
             var created = await _service.CreateAsync(property);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            return CreatedAtAction(nameof(GetById), new { id = created.IdProperty }, created);
         }
 
+        // PUT: api/Property/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
-            if (dto == null)
-                return BadRequest(new { message = "Propiedad inválida" });
-
             var property = new Property
             {
-                Id = dto.Id,
-                IdOwner = dto.IdOwner,
+                IdProperty = dto.IdProperty,
                 Name = dto.Name,
-                AddressProperty = dto.AddressProperty,
-                PriceProperty = dto.PriceProperty,
-                ImageUrl = dto.ImageUrl
+                Address = dto.Address,
+                Price = dto.Price,
+                CodeInternal = dto.CodeInternal,
+                Year = dto.Year,
+                Owner = dto.Owner != null ? new Owner
+                {
+                    IdOwner = dto.Owner.IdOwner,
+                    Name = dto.Owner.Name,
+                    Address = dto.Owner.Address,
+                    Photo = dto.Owner.Photo,
+                    Birthday = dto.Owner.Birthday
+                } : null,
+                Images = dto.Images?.Select(img => new PropertyImage
+                {
+                    IdPropertyImage = img.IdPropertyImage,
+                    File = img.File,
+                    Enabled = img.Enabled
+                }).ToList(),
+                Traces = dto.Traces?.Select(trace => new PropertyTrace
+                {
+                    IdPropertyTrace = trace.IdPropertyTrace,
+                    DateSale = trace.DateSale,
+                    Name = trace.Name,
+                    Value = trace.Value,
+                    Tax = trace.Tax
+                }).ToList()
             };
 
             var updated = await _service.UpdateAsync(id, property);
@@ -80,11 +125,15 @@ namespace RealEstate.API.Controllers
             return Ok(updated);
         }
 
+        // DELETE: api/Property/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteAsync(id);
-            return deleted ? Ok(new { message = "Propiedad eliminada" }) : NotFound(new { message = "Propiedad no encontrada" });
+            if (!deleted)
+                return NotFound(new { message = "Propiedad no encontrada" });
+
+            return Ok(new { message = "Propiedad eliminada" });
         }
     }
 }

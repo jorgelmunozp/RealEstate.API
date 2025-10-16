@@ -80,3 +80,9 @@ D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.g
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\ref\RealEstate.API.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\DotNetEnv.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Sprache.dll
+D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.MvcApplicationPartsAssemblyInfo.cs
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\AutoMapper.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\AutoMapper.Extensions.Microsoft.DependencyInjection.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.AspNetCore.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.DependencyInjectionExtensions.dll
