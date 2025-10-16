@@ -13,7 +13,7 @@ namespace RealEstate.API.Services
         {
             _cache = cache;
 
-            // 🔹 Obtener valores desde IConfiguration (ya incluye .env y variables de entorno)
+            // 🔹 Obtener valores desde IConfiguration
             var connectionString = config["MONGO_CONNECTION"] 
                                    ?? throw new Exception("MONGO_CONNECTION no definida");
             var databaseName = config["MONGO_DATABASE"] 
@@ -39,6 +39,9 @@ namespace RealEstate.API.Services
         // 🔹 Cache + paginación + metadatos
         public async Task<object> GetCachedAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
+            page = Math.Max(1, page);
+            limit = Math.Clamp(limit, 1, 100);
+
             var cacheKey = $"{name}-{address}-{minPrice}-{maxPrice}-{page}-{limit}";
 
             if (_cache.TryGetValue(cacheKey, out object cached))
@@ -62,6 +65,9 @@ namespace RealEstate.API.Services
         // 🔹 Filtros + paginación + conteo total
         public async Task<(List<Property> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
+            page = Math.Max(1, page);
+            limit = Math.Clamp(limit, 1, 100);
+
             var filterBuilder = Builders<Property>.Filter;
             var filters = new List<FilterDefinition<Property>>();
 

@@ -51,9 +51,6 @@ D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.r
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.pdb
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\DnsClient.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Configuration.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Abstractions.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Bson.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Driver.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\SharpCompress.dll
