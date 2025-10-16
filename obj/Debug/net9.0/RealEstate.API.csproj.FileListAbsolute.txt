@@ -89,3 +89,5 @@ D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.g
 D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\ref\RealEstate.API.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\DotNetEnv.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Sprache.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.xml
+D:\Apps\Real estate app\backend\RealEstate.API\obj\Debug\net9.0\RealEstate.API.xml

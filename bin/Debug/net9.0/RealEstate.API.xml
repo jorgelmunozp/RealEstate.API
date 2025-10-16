@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RealEstate.API</name>
+    </assembly>
+    <members>
+        <member name="M:RealEstate.API.Controllers.PropertyController.GetAll(System.String,System.String,System.Nullable{System.Decimal},System.Nullable{System.Decimal},System.Int32,System.Int32)">
+            <summary>
+            Obtiene todas las propiedades.
+            </summary>
+            <param name="name">Filtrar por nombre de propiedad (opcional).</param>
+            <param name="address">Filtrar por dirección (opcional).</param>
+            <param name="minPrice">Filtrar por precio mínimo (opcional).</param>
+            <param name="maxPrice">Filtrar por precio máximo (opcional).</param>
+            <param name="page">Número de página para paginación (por defecto 1).</param>
+            <param name="limit">Cantidad de elementos por página (por defecto 10).</param>
+            <returns>Lista paginada de propiedades que cumplen los filtros.</returns>
+        </member>
+        <member name="M:RealEstate.API.Controllers.PropertyController.GetById(System.String)">
+            <summary>
+            Obtiene una propiedad específica por su ID.
+            </summary>
+            <param name="id">ID de la propiedad.</param>
+            <returns>Propiedad encontrada o mensaje de error si no existe.</returns>
+        </member>
+        <member name="M:RealEstate.API.Controllers.PropertyController.Create(RealEstate.API.Models.Property)">
+            <summary>
+            Crea una nueva propiedad.
+            </summary>
+            <param name="property">Objeto de la propiedad a crear.</param>
+            <returns>La propiedad creada.</returns>
+        </member>
+        <member name="M:RealEstate.API.Controllers.PropertyController.Update(System.String,RealEstate.API.Models.Property)">
+            <summary>
+            Actualiza una propiedad existente.
+            </summary>
+            <param name="id">ID de la propiedad a actualizar.</param>
+            <param name="property">Objeto con los datos a actualizar.</param>
+            <returns>Propiedad actualizada o mensaje de error si no existe.</returns>
+        </member>
+        <member name="M:RealEstate.API.Controllers.PropertyController.Delete(System.String)">
+            <summary>
+            Elimina una propiedad por su ID.
+            </summary>
+            <param name="id">ID de la propiedad a eliminar.</param>
+            <returns>Mensaje de confirmación o error si no existe.</returns>
+        </member>
+    </members>
+</doc>

@@ -2,6 +2,8 @@ using MongoDB.Driver;
 using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 // 🔹 Cargar archivo .env antes de crear el builder
 DotNetEnv.Env.Load(); 
@@ -15,7 +17,20 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Swagger / OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "RealEstate API",
+        Version = "v1",
+        Description = "API para gestionar propiedades inmobiliarias"
+    });
+
+    // Configuración para leer comentarios XML
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+});
 
 // Controladores
 builder.Services.AddControllers();
@@ -51,11 +66,13 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // === PIPELINE ===
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RealEstate API V1");
+    c.RoutePrefix = string.Empty; // Swagger en la raíz
+});
+
 
 app.UseHttpsRedirection();
 
