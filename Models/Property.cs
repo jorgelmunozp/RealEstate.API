@@ -5,10 +5,12 @@ namespace RealEstate.API.Models
 {
     public class Property
     {
+        // MongoDB _id (interno)
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } = string.Empty;  // <-- MongoDB identifica el _id del documento
+        public string Id { get; set; } = string.Empty;
 
+        // ID de negocio, único para tu app
         [BsonElement("idProperty")]
         public string IdProperty { get; set; } = string.Empty;
 

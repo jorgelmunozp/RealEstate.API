@@ -1,4 +1,5 @@
 using MongoDB.Driver;
+using MongoDB.Bson;
 using RealEstate.API.Models;
 using RealEstate.API.Dtos;
 using Microsoft.Extensions.Caching.Memory;
@@ -14,17 +15,18 @@ namespace RealEstate.API.Services
         {
             _cache = cache;
 
-            var connectionString = config["MONGO_CONNECTION"]
+            var connectionString = config["MONGO_CONNECTION"] 
                                    ?? throw new Exception("MONGO_CONNECTION no definida");
-            var databaseName = config["MONGO_DATABASE"]
+            var databaseName = config["MONGO_DATABASE"] 
                                ?? throw new Exception("MONGO_DATABASE no definida");
-            var collectionName = config["MONGO_COLLECTION"]
+            var collectionName = config["MONGO_COLLECTION"] 
                                  ?? throw new Exception("MONGO_COLLECTION no definida");
 
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase(databaseName);
             _properties = database.GetCollection<Property>(collectionName);
 
+            // Índices
             _properties.Indexes.CreateOne(
                 new CreateIndexModel<Property>(
                     Builders<Property>.IndexKeys
@@ -35,6 +37,7 @@ namespace RealEstate.API.Services
             );
         }
 
+        // GET paginado y cacheado
         public async Task<object> GetCachedAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
             page = Math.Max(1, page);
@@ -59,6 +62,7 @@ namespace RealEstate.API.Services
             return result;
         }
 
+        // Filtros + paginación
         public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
             page = Math.Max(1, page);
@@ -68,9 +72,9 @@ namespace RealEstate.API.Services
             var filters = new List<FilterDefinition<Property>>();
 
             if (!string.IsNullOrEmpty(name))
-                filters.Add(filterBuilder.Regex(nameof(Property.Name), new MongoDB.Bson.BsonRegularExpression(name, "i")));
+                filters.Add(filterBuilder.Regex(nameof(Property.Name), new BsonRegularExpression(name, "i")));
             if (!string.IsNullOrEmpty(address))
-                filters.Add(filterBuilder.Regex(nameof(Property.Address), new MongoDB.Bson.BsonRegularExpression(address, "i")));
+                filters.Add(filterBuilder.Regex(nameof(Property.Address), new BsonRegularExpression(address, "i")));
             if (minPrice.HasValue)
                 filters.Add(filterBuilder.Gte(nameof(Property.Price), minPrice.Value));
             if (maxPrice.HasValue)
@@ -85,52 +89,61 @@ namespace RealEstate.API.Services
                 .Limit(limit)
                 .ToListAsync();
 
-            var dataDtos = dataEntities.Select(p => MapToDto(p)!).ToList(); // safe-forced null
+            var dataDtos = dataEntities.Select(MapToDto).ToList();
             return (dataDtos, totalItems);
         }
 
+        // VALIDACIÓN de ObjectId antes de buscar
         public async Task<PropertyDto?> GetByIdAsync(string id)
         {
-            var property = await _properties.Find(p => p.IdProperty == id).FirstOrDefaultAsync();
-            if (property == null) return null;
+            if (!ObjectId.TryParse(id, out _))
+                throw new Exception($"El id '{id}' no es un ObjectId válido.");
 
-            return MapToDto(property); // MapToDto acepta Property no-null, siempre retorna no-null
+            var property = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+            return property != null ? MapToDto(property) : null;
         }
 
         public async Task<PropertyDto> CreateAsync(Property property)
         {
             await _properties.InsertOneAsync(property);
-            return MapToDto(property)!;
+            return MapToDto(property);
         }
 
         public async Task<PropertyDto?> UpdateAsync(string id, Property property)
         {
-            var result = await _properties.ReplaceOneAsync(p => p.IdProperty == id, property);
-            if (result.ModifiedCount == 0) return null;
+            if (!ObjectId.TryParse(id, out _))
+                throw new Exception($"El id '{id}' no es un ObjectId válido.");
 
-            return MapToDto(property)!;
+            var result = await _properties.ReplaceOneAsync(p => p.Id == id, property);
+            return result.ModifiedCount > 0 ? MapToDto(property) : null;
         }
 
         public async Task<bool> DeleteAsync(string id)
         {
-            var result = await _properties.DeleteOneAsync(p => p.IdProperty == id);
+            if (!ObjectId.TryParse(id, out _))
+                throw new Exception($"El id '{id}' no es un ObjectId válido.");
+
+            var result = await _properties.DeleteOneAsync(p => p.Id == id);
             return result.DeletedCount > 0;
         }
 
         public async Task<bool> ExistsAsync(string id)
         {
-            var count = await _properties.CountDocumentsAsync(p => p.IdProperty == id);
+            if (!ObjectId.TryParse(id, out _))
+                return false;
+
+            var count = await _properties.CountDocumentsAsync(p => p.Id == id);
             return count > 0;
         }
 
-        // Map manual Property → PropertyDto
-        private static PropertyDto? MapToDto(Property? property)
+        // -------------------
+        // Map manual Property → DTO
+        // -------------------
+        private static PropertyDto MapToDto(Property property)
         {
-            if (property == null) return null;
-
             return new PropertyDto
             {
-                IdProperty = property.IdProperty,
+                IdProperty = property.Id,
                 Name = property.Name,
                 Address = property.Address,
                 Price = property.Price,

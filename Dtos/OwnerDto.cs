@@ -6,6 +6,6 @@ namespace RealEstate.API.Dtos
         public string Name { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public string Photo { get; set; } = string.Empty;
-        public string Birthday { get; set; } = string.Empty; // O DateTime si quieres
+        public string Birthday { get; set; } = string.Empty;
     }
 }

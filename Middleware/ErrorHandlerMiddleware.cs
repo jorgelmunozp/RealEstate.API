@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Http;
 using System.Net;
 using System.Text.Json;
-using FluentValidation;
-using System.Linq;
+using Microsoft.AspNetCore.Http;
 
 namespace RealEstate.API.Middleware
 {
@@ -19,43 +17,27 @@ namespace RealEstate.API.Middleware
         {
             try
             {
-                await _next(context); // pasa la solicitud al siguiente middleware
-            }
-            catch (ValidationException ex)
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                context.Response.ContentType = "application/json";
-
-                var result = JsonSerializer.Serialize(new
-                {
-                    error = "Datos inválidos",
-                    detail = ex.Errors.Select(e => new { e.PropertyName, e.ErrorMessage })
-                });
-
-                await context.Response.WriteAsync(result);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                await HandleExceptionAsync(context, ex, HttpStatusCode.NotFound);
-            }
-            catch (ArgumentException ex)
-            {
-                await HandleExceptionAsync(context, ex, HttpStatusCode.BadRequest);
+                await _next(context);
             }
             catch (Exception ex)
             {
-                await HandleExceptionAsync(context, ex, HttpStatusCode.InternalServerError);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+                var response = new
+                {
+                    message = ex.Message
+                };
+
+                var options = new JsonSerializerOptions
+                {
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                    WriteIndented = true
+                };
+
+                var json = JsonSerializer.Serialize(response, options);
+                await context.Response.WriteAsync(json);
             }
-        }
-
-        private Task HandleExceptionAsync(HttpContext context, Exception exception, HttpStatusCode code)
-        {
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)code;
-
-            var result = JsonSerializer.Serialize(new { message = exception?.Message });
-
-            return context.Response.WriteAsync(result);
         }
     }
 }

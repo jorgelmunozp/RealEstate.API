@@ -3,12 +3,13 @@ using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
 using RealEstate.API.Middleware;
+using FluentValidation;
 using FluentValidation.AspNetCore;
-using AutoMapper; // <- Asegúrate de importar AutoMapper
-using RealEstate.API.Mappings; // <- Importa tu MappingProfile
+using AutoMapper;
+using RealEstate.API.Mappings;
 
-// 🔹 Cargar archivo .env antes de crear el builder
-DotNetEnv.Env.Load(); 
+// 🔹 Cargar variables de entorno antes de crear el builder
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,9 +18,15 @@ builder.Configuration.AddEnvironmentVariables();
 
 // === CONFIGURACIÓN DE SERVICIOS ===
 
-// Controladores con FluentValidation
+// Controladores con FluentValidation y JSON legible
 builder.Services.AddControllers()
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>());
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>())
+    .AddJsonOptions(options =>
+    {
+        // Evita escape de comillas y caracteres especiales
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        options.JsonSerializerOptions.WriteIndented = true; // JSON bonito para debugging
+    });
 
 // Caché en memoria
 builder.Services.AddMemoryCache();
@@ -32,7 +39,7 @@ builder.Services.AddSingleton<PropertyService>(sp =>
 });
 
 // AutoMapper
-builder.Services.AddAutoMapper(typeof(MappingProfile)); // <- Línea agregada
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // CORS
 builder.Services.AddCors(options =>
@@ -55,7 +62,6 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // === PIPELINE ===
-
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 

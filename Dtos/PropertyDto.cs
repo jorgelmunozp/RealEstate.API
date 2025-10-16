@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace RealEstate.API.Dtos
 {
     public class PropertyDto
@@ -10,7 +8,6 @@ namespace RealEstate.API.Dtos
         public decimal Price { get; set; }
         public int CodeInternal { get; set; }
         public int Year { get; set; }
-
         public OwnerDto Owner { get; set; } = new OwnerDto();
         public List<PropertyImageDto> Images { get; set; } = new List<PropertyImageDto>();
         public List<PropertyTraceDto> Traces { get; set; } = new List<PropertyTraceDto>();

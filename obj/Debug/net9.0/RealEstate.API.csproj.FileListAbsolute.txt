@@ -86,3 +86,10 @@ D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\AutoMapper.Exten
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.AspNetCore.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\FluentValidation.DependencyInjectionExtensions.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\AWSSDK.Core.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\AWSSDK.SecurityToken.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Driver.Core.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\MongoDB.Libmongocrypt.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\runtimes\linux\native\libmongocrypt.so
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\runtimes\osx\native\libmongocrypt.dylib
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\runtimes\win\native\mongocrypt.dll

@@ -56,9 +56,13 @@
               "target": "Package",
               "version": "[11.3.1, )"
             },
+            "Microsoft.Extensions.Caching.Memory": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
             "MongoDB.Driver": {
               "target": "Package",
-              "version": "[3.5.0, )"
+              "version": "[2.23.0, )"
             }
           },
           "imports": [
