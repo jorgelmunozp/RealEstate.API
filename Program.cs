@@ -1,8 +1,15 @@
 using MongoDB.Driver;
-using RealEstate.API.Models;
 using RealEstate.API.Services;
+using Microsoft.Extensions.Caching.Memory;
+using DotNetEnv;
+
+// 🔹 Cargar archivo .env antes de crear el builder
+DotNetEnv.Env.Load(); 
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 🔹 Agregar variables de entorno al Configuration de .NET
+builder.Configuration.AddEnvironmentVariables();
 
 // === CONFIGURACIÓN DE SERVICIOS ===
 
@@ -10,8 +17,36 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Servicio de Propiedades (inyectado como singleton)
-builder.Services.AddSingleton<PropertyService>();
+// Controladores
+builder.Services.AddControllers();
+
+// Caché en memoria
+builder.Services.AddMemoryCache();
+
+// Servicio de Propiedades, pasando IConfiguration y IMemoryCache
+builder.Services.AddSingleton<PropertyService>(sp =>
+{
+    var cache = sp.GetRequiredService<IMemoryCache>();
+    return new PropertyService(builder.Configuration, cache);
+});
+
+// === CORS (para permitir peticiones desde el frontend) ===
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",   // React
+                "https://localhost:3000",  // React HTTPS
+                "http://localhost:5173",   // Vite
+                "https://localhost:5173"   // Vite HTTPS
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
@@ -24,8 +59,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Activar CORS
+app.UseCors("AllowFrontend");
+
 // === MIDDLEWARE GLOBAL DE ERRORES ===
-// Toda excepción no controlada sea atrapada y devuelva un JSON claro al cliente (y no una página de error .NET)
 app.Use(async (context, next) =>
 {
     try
@@ -49,30 +86,7 @@ app.Use(async (context, next) =>
     }
 });
 
-
-// === ENDPOINTS ===
-
-// Obtener todas las propiedades con filtros
-app.MapGet("/api/property", async (
-    string? name,
-    string? address,
-    decimal? minPrice,
-    decimal? maxPrice,
-    PropertyService service) =>
-{
-    var properties = await service.GetAllAsync(name, address, minPrice, maxPrice);
-    return Results.Ok(properties);
-})
-.WithName("GetAllProperties")
-.WithOpenApi();
-
-// Obtener propiedad por ID
-app.MapGet("/api/property/{id}", async (string id, PropertyService service) =>
-{
-    var property = await service.GetByIdAsync(id);
-    return property is not null ? Results.Ok(property) : Results.NotFound();
-})
-.WithName("GetPropertyById")
-.WithOpenApi();
+// === ENDPOINTS CONTROLADOS ===
+app.MapControllers();
 
 app.Run();
