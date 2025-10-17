@@ -14,9 +14,9 @@ namespace RealEstate.API.Models
         public string Name { get; set; } = string.Empty;
 
         [BsonElement("value")]
-        public decimal Value { get; set; }
+        public long Value { get; set; }
 
         [BsonElement("tax")]
-        public decimal Tax { get; set; }
+        public long Tax { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using RealEstate.API.Models;
 using RealEstate.API.Dtos;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.AspNetCore.JsonPatch;
 
 namespace RealEstate.API.Services
 {
@@ -15,18 +16,18 @@ namespace RealEstate.API.Services
         {
             _cache = cache;
 
-            var connectionString = config["MONGO_CONNECTION"] 
+            var connectionString = config["MONGO_CONNECTION"]
                                    ?? throw new Exception("MONGO_CONNECTION no definida");
-            var databaseName = config["MONGO_DATABASE"] 
+            var databaseName = config["MONGO_DATABASE"]
                                ?? throw new Exception("MONGO_DATABASE no definida");
-            var collectionName = config["MONGO_COLLECTION"] 
+            var collectionName = config["MONGO_COLLECTION"]
                                  ?? throw new Exception("MONGO_COLLECTION no definida");
 
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase(databaseName);
             _properties = database.GetCollection<Property>(collectionName);
 
-            // Índices
+            // Crear índices para mejorar las búsquedas
             _properties.Indexes.CreateOne(
                 new CreateIndexModel<Property>(
                     Builders<Property>.IndexKeys
@@ -65,9 +66,6 @@ namespace RealEstate.API.Services
         // Filtros + paginación
         public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, decimal? minPrice, decimal? maxPrice, int page = 1, int limit = 10)
         {
-            page = Math.Max(1, page);
-            limit = Math.Clamp(limit, 1, 100);
-
             var filterBuilder = Builders<Property>.Filter;
             var filters = new List<FilterDefinition<Property>>();
 
@@ -109,13 +107,43 @@ namespace RealEstate.API.Services
             return MapToDto(property);
         }
 
-        public async Task<PropertyDto?> UpdateAsync(string id, Property property)
+        public async Task<Property?> UpdateAsync(string id, Property updatedProperty)
+        {
+            // Busca la propiedad existente
+            var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return null;
+
+            // ✅ Asegurar que el Id del documento no se pierda
+            updatedProperty.Id = existing.Id;
+
+            // Reemplaza el documento existente por el nuevo
+            await _properties.ReplaceOneAsync(p => p.Id == id, updatedProperty);
+
+            return updatedProperty;
+        }
+
+
+        // ✅ NUEVO MÉTODO PATCH (actualización parcial)
+        public async Task<PropertyDto?> PatchAsync(string id, JsonPatchDocument<PropertyDto> patchDoc)
         {
             if (!ObjectId.TryParse(id, out _))
                 throw new Exception($"El id '{id}' no es un ObjectId válido.");
 
-            var result = await _properties.ReplaceOneAsync(p => p.Id == id, property);
-            return result.ModifiedCount > 0 ? MapToDto(property) : null;
+            var existing = await GetByIdAsync(id);
+            if (existing == null)
+                return null;
+
+            // Aplicar los cambios al DTO existente
+            patchDoc.ApplyTo(existing);
+
+            // Convertir DTO → modelo
+            var updatedModel = MapFromDto(existing);
+
+            // Reemplazar el documento en MongoDB
+            var result = await _properties.ReplaceOneAsync(p => p.Id == id, updatedModel);
+
+            return result.ModifiedCount > 0 ? existing : null;
         }
 
         public async Task<bool> DeleteAsync(string id)
@@ -137,7 +165,7 @@ namespace RealEstate.API.Services
         }
 
         // -------------------
-        // Map manual Property → DTO
+        // Mapeos
         // -------------------
         private static PropertyDto MapToDto(Property property)
         {
@@ -171,6 +199,41 @@ namespace RealEstate.API.Services
                     Value = trace.Value,
                     Tax = trace.Tax
                 }).ToList() ?? new List<PropertyTraceDto>()
+            };
+        }
+
+        private static Property MapFromDto(PropertyDto dto)
+        {
+            return new Property
+            {
+                IdProperty = dto.IdProperty,
+                Name = dto.Name,
+                Address = dto.Address,
+                Price = dto.Price,
+                CodeInternal = dto.CodeInternal,
+                Year = dto.Year,
+                Owner = dto.Owner != null ? new Owner
+                {
+                    IdOwner = dto.Owner.IdOwner,
+                    Name = dto.Owner.Name,
+                    Address = dto.Owner.Address,
+                    Photo = dto.Owner.Photo,
+                    Birthday = dto.Owner.Birthday
+                } : null,
+                Images = dto.Images?.Select(img => new PropertyImage
+                {
+                    IdPropertyImage = img.IdPropertyImage,
+                    File = img.File,
+                    Enabled = img.Enabled
+                }).ToList(),
+                Traces = dto.Traces?.Select(trace => new PropertyTrace
+                {
+                    IdPropertyTrace = trace.IdPropertyTrace,
+                    DateSale = trace.DateSale,
+                    Name = trace.Name,
+                    Value = trace.Value,
+                    Tax = trace.Tax
+                }).ToList()
             };
         }
     }

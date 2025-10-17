@@ -21,7 +21,7 @@ namespace RealEstate.API.Models
         public string Address { get; set; } = string.Empty;
 
         [BsonElement("price")]
-        public decimal Price { get; set; }
+        public long Price { get; set; }
 
         [BsonElement("codeInternal")]
         public int CodeInternal { get; set; }

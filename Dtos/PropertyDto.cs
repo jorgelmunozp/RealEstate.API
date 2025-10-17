@@ -5,7 +5,7 @@ namespace RealEstate.API.Dtos
         public string IdProperty { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
-        public decimal Price { get; set; }
+        public long Price { get; set; }
         public int CodeInternal { get; set; }
         public int Year { get; set; }
         public OwnerDto Owner { get; set; } = new OwnerDto();

@@ -7,26 +7,32 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using AutoMapper;
 using RealEstate.API.Mappings;
+using Microsoft.AspNetCore.Mvc.NewtonsoftJson; // 👈 necesario para AddNewtonsoftJson()
 
-// 🔹 Cargar variables de entorno antes de crear el builder
+// ==========================================
+// 🔹 CARGA DE VARIABLES DE ENTORNO
+// ==========================================
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Agregar variables de entorno al Configuration de .NET
+// Agregar variables de entorno al Configuration de .NET
 builder.Configuration.AddEnvironmentVariables();
 
-// === CONFIGURACIÓN DE SERVICIOS ===
+// ==========================================
+// 🔹 CONFIGURACIÓN DE SERVICIOS
+// ==========================================
 
-// Controladores con FluentValidation y JSON legible
+// Controladores con soporte completo para PATCH y JSON flexible
 builder.Services.AddControllers()
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>())
-    .AddJsonOptions(options =>
+    .AddNewtonsoftJson(options =>
     {
-        // Evita escape de comillas y caracteres especiales
-        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-        options.JsonSerializerOptions.WriteIndented = true; // JSON bonito para debugging
-    });
+        // 👇 Configuración de Newtonsoft para que soporte JSON Patch y evite conflictos de etiquetas por mayúsculas y minúsculas
+        options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+        options.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+        options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+    })
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>());
 
 // Caché en memoria
 builder.Services.AddMemoryCache();
@@ -41,34 +47,36 @@ builder.Services.AddSingleton<PropertyService>(sp =>
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// CORS
+// CORS global (permitir todo en desarrollo)
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:3000",
-                "https://localhost:3000",
-                "http://localhost:5173",
-                "https://localhost:5173"
-            )
-            .AllowAnyHeader()
+            .AllowAnyOrigin()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyHeader();
     });
 });
 
+// ==========================================
+// 🔹 CONSTRUCCIÓN DE LA APP
+// ==========================================
 var app = builder.Build();
 
-// === PIPELINE ===
+// ==========================================
+// 🔹 MIDDLEWARE Y PIPELINE
+// ==========================================
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+app.UseCors("AllowAll");
 
-// Middleware global de errores (centralizado)
+// Middleware global de errores
 app.UseMiddleware<ErrorHandlerMiddleware>();
 
 // Mapear controladores
 app.MapControllers();
 
+// ==========================================
+// 🔹 EJECUCIÓN
+// ==========================================
 app.Run();

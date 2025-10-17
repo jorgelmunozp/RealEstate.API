@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Services;
 using RealEstate.API.Models;
@@ -60,6 +61,34 @@ namespace RealEstate.API.Controllers
                 return NotFound(new { message = "Propiedad no encontrada" });
 
             return Ok(updated);
+        }
+
+        // PATCH: api/Property/{id}
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Patch(string id, [FromBody] JsonPatchDocument<PropertyDto> patchDoc)
+        {
+            if (patchDoc == null)
+                return BadRequest(new { message = "Documento PATCH inválido" });
+
+            var existingDto = await _service.GetByIdAsync(id);
+            if (existingDto == null)
+                return NotFound(new { message = "Propiedad no encontrada" });
+
+            patchDoc.ApplyTo(existingDto, e =>
+            {
+                ModelState.AddModelError(e.AffectedObject?.ToString() ?? string.Empty, e.ErrorMessage);
+            });
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var updatedProperty = MapDtoToProperty(existingDto);
+
+            // ✅ Mantener el Id original ANTES de guardar
+            updatedProperty.Id = id;
+
+            var result = await _service.UpdateAsync(id, updatedProperty);
+            return Ok(result);
         }
 
         // DELETE: api/Property/{id}
