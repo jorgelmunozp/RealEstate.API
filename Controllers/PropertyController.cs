@@ -24,8 +24,8 @@ namespace RealEstate.API.Controllers
         public async Task<IActionResult> GetAll(
             [FromQuery] string? name,
             [FromQuery] string? address,
-            [FromQuery] decimal? minPrice,
-            [FromQuery] decimal? maxPrice,
+            [FromQuery] long? minPrice,
+            [FromQuery] long? maxPrice,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 10)
         {
