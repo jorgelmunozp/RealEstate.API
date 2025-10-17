@@ -3,31 +3,37 @@ using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
 using RealEstate.API.Middleware;
-using FluentValidation;
 using FluentValidation.AspNetCore;
 using AutoMapper;
 using RealEstate.API.Mappings;
-using Microsoft.AspNetCore.Mvc.NewtonsoftJson; // 👈 necesario para AddNewtonsoftJson()
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 // ==========================================
 // 🔹 CARGA DE VARIABLES DE ENTORNO
 // ==========================================
 DotNetEnv.Env.Load();
-
 var builder = WebApplication.CreateBuilder(args);
-
-// Agregar variables de entorno al Configuration de .NET
 builder.Configuration.AddEnvironmentVariables();
 
 // ==========================================
 // 🔹 CONFIGURACIÓN DE SERVICIOS
 // ==========================================
 
-// Controladores con soporte completo para PATCH y JSON flexible
+// MongoDB
+var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION") 
+    ?? "mongodb://localhost:27017";
+var mongoDbName = Environment.GetEnvironmentVariable("MONGO_DATABASE") 
+    ?? "RealEstateDb";
+var mongoClient = new MongoClient(mongoConnectionString);
+var database = mongoClient.GetDatabase(mongoDbName);
+builder.Services.AddSingleton(database);
+
+// Controladores + Newtonsoft + FluentValidation
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
-        // 👇 Configuración de Newtonsoft para que soporte JSON Patch y evite conflictos de etiquetas por mayúsculas y minúsculas
         options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
         options.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
         options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
@@ -37,12 +43,14 @@ builder.Services.AddControllers()
 // Caché en memoria
 builder.Services.AddMemoryCache();
 
-// Servicio de Propiedades
+// Servicios
 builder.Services.AddSingleton<PropertyService>(sp =>
 {
     var cache = sp.GetRequiredService<IMemoryCache>();
     return new PropertyService(builder.Configuration, cache);
 });
+builder.Services.AddSingleton<UserService>();
+builder.Services.AddSingleton<JwtService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -52,12 +60,46 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
+
+// ==========================================
+// 🔹 CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
+// ==========================================
+var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET") 
+    ?? "ClaveSuperSecretaMuyLarga123!";
+var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
+    ?? "RealEstateAPI";
+var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
+    ?? "UsuariosAPI";
+var expiryMinutes = Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60";
+
+var keyBytes = Encoding.UTF8.GetBytes(secretKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // ==========================================
 // 🔹 CONSTRUCCIÓN DE LA APP
@@ -65,13 +107,14 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ==========================================
-// 🔹 MIDDLEWARE Y PIPELINE
+// 🔹 MIDDLEWARE
 // ==========================================
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-
-// Middleware global de errores
 app.UseMiddleware<ErrorHandlerMiddleware>();
+
+app.UseAuthentication();   // 🔹 JWT
+app.UseAuthorization();
 
 // Mapear controladores
 app.MapControllers();

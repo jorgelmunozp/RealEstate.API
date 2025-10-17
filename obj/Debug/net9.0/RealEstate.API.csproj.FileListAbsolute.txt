@@ -97,5 +97,13 @@ D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.AspNet
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.AspNetCore.Mvc.NewtonsoftJson.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Newtonsoft.Json.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Newtonsoft.Json.Bson.dll
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\property.json
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\propertyUpdate.json
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\propertyCreate.json
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
+D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll

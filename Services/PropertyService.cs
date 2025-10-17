@@ -20,8 +20,8 @@ namespace RealEstate.API.Services
                                    ?? throw new Exception("MONGO_CONNECTION no definida");
             var databaseName = config["MONGO_DATABASE"]
                                ?? throw new Exception("MONGO_DATABASE no definida");
-            var collectionName = config["MONGO_COLLECTION"]
-                                 ?? throw new Exception("MONGO_COLLECTION no definida");
+            var collectionName = config["MONGO_COLLECTION_PROPERTIES"]
+                                 ?? throw new Exception("MONGO_COLLECTION_PROPERTIES no definida");
 
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase(databaseName);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Services;
 using RealEstate.API.Models;
 using RealEstate.API.Dtos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RealEstate.API.Controllers
 {
@@ -18,6 +19,7 @@ namespace RealEstate.API.Controllers
         }
 
         // GET: api/Property
+        // [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? name,
@@ -25,13 +27,14 @@ namespace RealEstate.API.Controllers
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice,
             [FromQuery] int page = 1,
-            [FromQuery] int limit = 30)
+            [FromQuery] int limit = 10)
         {
             var result = await _service.GetCachedAsync(name, address, minPrice, maxPrice, page, limit);
             return Ok(result);
         }
 
         // GET: api/Property/{id}
+        // [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
@@ -43,6 +46,7 @@ namespace RealEstate.API.Controllers
         }
 
         // POST: api/Property
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreatePropertyDto dto)
         {
@@ -55,6 +59,7 @@ namespace RealEstate.API.Controllers
         }
 
         // PUT: api/Property/{id}
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
@@ -67,6 +72,7 @@ namespace RealEstate.API.Controllers
         }
 
         // PATCH: api/Property/{id}
+        [Authorize]
         [HttpPatch("{id}")]
         public async Task<IActionResult> Patch(string id, [FromBody] JsonPatchDocument<PropertyDto> patchDoc)
         {
@@ -95,6 +101,8 @@ namespace RealEstate.API.Controllers
         }
 
         // DELETE: api/Property/{id}
+        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
