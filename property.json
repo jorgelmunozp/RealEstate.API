@@ -1,0 +1,30 @@
+{
+  "name": "Loft en Chapinero",
+  "address": "Calle 60 #9-30, Bogotá",
+  "price": 1150000000,
+  "codeInternal": 21,
+  "year": 2024,
+  "owner": {
+    "idOwner": "OWN021",
+    "name": "Daniel Rincón",
+    "address": "Carrera 10, Bogotá",
+    "photo": "https://example.com/photo21.jpg",
+    "birthday": "1990-09-01"
+  },
+  "images": [
+    {
+      "idPropertyImage": "IMG021",
+      "file": "https://www.360agenciainmobiliaria.com/articulo/chapinero-loft.jpg",
+      "enabled": true
+    }
+  ],
+  "traces": [
+    {
+      "idPropertyTrace": "TRACE021",
+      "dateSale": "2024-06-15",
+      "name": "Venta Inicial",
+      "value": 1150000000,
+      "tax": 20000000
+    }
+  ]
+}

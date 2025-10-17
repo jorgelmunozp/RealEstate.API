@@ -101,30 +101,38 @@ namespace RealEstate.API.Services
             return property != null ? MapToDto(property) : null;
         }
 
-        public async Task<PropertyDto> CreateAsync(Property property)
+        public async Task<CreatePropertyDto> CreateAsync(Property property)
         {
             await _properties.InsertOneAsync(property);
-            return MapToDto(property);
+
+            // Asignar IdProperty con el Id generado por MongoDB si es null
+            // if (string.IsNullOrEmpty(property.IdProperty))
+            // {
+                property.IdProperty = property.Id;
+                var update = Builders<Property>.Update.Set(p => p.IdProperty, property.IdProperty);
+                await _properties.UpdateOneAsync(p => p.Id == property.Id, update);
+            // }
+
+            return MapToCreateDto(property);
         }
 
         public async Task<Property?> UpdateAsync(string id, Property updatedProperty)
         {
-            // Busca la propiedad existente
             var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
             if (existing == null)
                 return null;
 
-            // ✅ Asegurar que el Id del documento no se pierda
             updatedProperty.Id = existing.Id;
 
-            // Reemplaza el documento existente por el nuevo
+            // Mantener IdProperty si no viene en el update
+            if (string.IsNullOrEmpty(updatedProperty.IdProperty))
+                updatedProperty.IdProperty = existing.IdProperty;
+
             await _properties.ReplaceOneAsync(p => p.Id == id, updatedProperty);
 
             return updatedProperty;
         }
 
-
-        // ✅ NUEVO MÉTODO PATCH (actualización parcial)
         public async Task<PropertyDto?> PatchAsync(string id, JsonPatchDocument<PropertyDto> patchDoc)
         {
             if (!ObjectId.TryParse(id, out _))
@@ -134,13 +142,14 @@ namespace RealEstate.API.Services
             if (existing == null)
                 return null;
 
-            // Aplicar los cambios al DTO existente
             patchDoc.ApplyTo(existing);
 
-            // Convertir DTO → modelo
             var updatedModel = MapFromDto(existing);
 
-            // Reemplazar el documento en MongoDB
+            // Mantener IdProperty si no viene en el patch
+            if (string.IsNullOrEmpty(updatedModel.IdProperty))
+                updatedModel.IdProperty = existing.IdProperty;
+
             var result = await _properties.ReplaceOneAsync(p => p.Id == id, updatedModel);
 
             return result.ModifiedCount > 0 ? existing : null;
@@ -171,7 +180,43 @@ namespace RealEstate.API.Services
         {
             return new PropertyDto
             {
-                IdProperty = property.Id,
+                IdProperty = property.IdProperty ?? property.Id,
+                Name = property.Name,
+                Address = property.Address,
+                Price = property.Price,
+                CodeInternal = property.CodeInternal,
+                Year = property.Year,
+                Owner = property.Owner != null ? new OwnerDto
+                {
+                    IdOwner = property.Owner.IdOwner,
+                    Name = property.Owner.Name,
+                    Address = property.Owner.Address,
+                    Photo = property.Owner.Photo,
+                    Birthday = property.Owner.Birthday
+                } : new OwnerDto(),
+                Images = property.Images?.Select(img => new PropertyImageDto
+                {
+                    IdPropertyImage = img.IdPropertyImage,
+                    File = img.File,
+                    Enabled = img.Enabled
+                }).ToList() ?? new List<PropertyImageDto>(),
+                Traces = property.Traces?.Select(trace => new PropertyTraceDto
+                {
+                    IdPropertyTrace = trace.IdPropertyTrace,
+                    DateSale = trace.DateSale,
+                    Name = trace.Name,
+                    Value = trace.Value,
+                    Tax = trace.Tax
+                }).ToList() ?? new List<PropertyTraceDto>()
+            };
+        }
+
+
+        private static CreatePropertyDto MapToCreateDto(Property property)
+        {
+            return new CreatePropertyDto
+            {
+                IdProperty = property.IdProperty ?? property.Id,
                 Name = property.Name,
                 Address = property.Address,
                 Price = property.Price,
