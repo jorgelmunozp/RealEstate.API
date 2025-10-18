@@ -78,6 +78,7 @@ public class AuthController : ControllerBase
 
         var user = new User
         {
+            Id = default!,
             Name = request.Name,
             Email = request.Email,
             Password = hashedPassword,

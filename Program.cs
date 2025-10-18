@@ -3,6 +3,7 @@ using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
 using DotNetEnv;
 using RealEstate.API.Middleware;
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using AutoMapper;
 using RealEstate.API.Mappings;
@@ -30,15 +31,19 @@ var mongoClient = new MongoClient(mongoConnectionString);
 var database = mongoClient.GetDatabase(mongoDbName);
 builder.Services.AddSingleton(database);
 
-// Controladores + Newtonsoft + FluentValidation
+// Controladores + Newtonsoft + FluentValidation moderno
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
         options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
         options.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
         options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-    })
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<Program>());
+    });
+
+// FluentValidation actualizado
+builder.Services.AddFluentValidationAutoValidation()
+                .AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Caché en memoria
 builder.Services.AddMemoryCache();
