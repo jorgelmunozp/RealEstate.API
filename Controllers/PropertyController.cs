@@ -102,7 +102,7 @@ namespace RealEstate.API.Controllers
 
         // DELETE: api/Property/{id}
         [Authorize]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
