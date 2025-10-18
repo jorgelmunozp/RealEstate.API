@@ -1,0 +1,45 @@
+# Build Folders
+bin/
+obj/
+out/
+
+# Visual Studio / Rider / JetBrains
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+*.rider/
+*.sln.iml
+
+# ASP.NET / .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Logs
+*.log
+logs/
+
+# OS Generated
+.DS_Store
+Thumbs.db
+
+# Local configuration files
+appsettings.Local.json
+launchSettings.json
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# MongoDB local data (si tienes carpeta de datos local)
+data/

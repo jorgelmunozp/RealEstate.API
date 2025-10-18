@@ -88,18 +88,6 @@
               "target": "Package",
               "version": "[2.23.0, )"
             },
-            "Moq": {
-              "target": "Package",
-              "version": "[4.20.72, )"
-            },
-            "NUnit": {
-              "target": "Package",
-              "version": "[4.4.0, )"
-            },
-            "NUnit3TestAdapter": {
-              "target": "Package",
-              "version": "[5.2.0, )"
-            },
             "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",
               "version": "[8.14.0, )"
