@@ -19,7 +19,6 @@ namespace RealEstate.API.Controllers
         }
 
         // GET: api/Property
-        // [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? name,
@@ -27,14 +26,13 @@ namespace RealEstate.API.Controllers
             [FromQuery] long? minPrice,
             [FromQuery] long? maxPrice,
             [FromQuery] int page = 1,
-            [FromQuery] int limit = 10)
+            [FromQuery] int limit = 6)
         {
             var result = await _service.GetCachedAsync(name, address, minPrice, maxPrice, page, limit);
             return Ok(result);
         }
 
         // GET: api/Property/{id}
-        // [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {

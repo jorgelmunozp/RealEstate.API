@@ -104,6 +104,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddScoped<AuthService>();
+
 builder.Services.AddAuthorization();
 
 // ==========================================
@@ -120,6 +122,8 @@ app.UseMiddleware<ErrorHandlerMiddleware>();
 
 app.UseAuthentication();   // 🔹 JWT
 app.UseAuthorization();
+
+app.MapControllers().RequireCors("AllowAll");
 
 // Mapear controladores
 app.MapControllers();

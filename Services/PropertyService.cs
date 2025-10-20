@@ -47,7 +47,7 @@ namespace RealEstate.API.Services
             long? minPrice,
             long? maxPrice,
             int page = 1,
-            int limit = 10)
+            int limit = 6)
         {
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
@@ -80,7 +80,7 @@ namespace RealEstate.API.Services
             long? minPrice,
             long? maxPrice,
             int page = 1,
-            int limit = 10)
+            int limit = 6)
         {
             var filterBuilder = Builders<Property>.Filter;
             var filters = new List<FilterDefinition<Property>>();
