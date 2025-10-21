@@ -1,66 +1,182 @@
 using MongoDB.Driver;
-using RealEstate.API.Services;
 using Microsoft.Extensions.Caching.Memory;
-using DotNetEnv;
-using RealEstate.API.Middleware;
-using FluentValidation;
-using FluentValidation.AspNetCore;
-using AutoMapper;
-using RealEstate.API.Mappings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using DotNetEnv;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using RealEstate.API.Middleware;
+using RealEstate.API.Modules.Auth.Dto;
+using RealEstate.API.Modules.Auth.Validator;
 
-// ==========================================
-// 🔹 CARGA DE VARIABLES DE ENTORNO
-// ==========================================
+// Auth Service
+using RealEstate.API.Modules.Auth.Service;
+
+// Properties Service
+using RealEstate.API.Modules.Properties.Service;
+
+// User Service
+using RealEstate.API.Modules.User.Dto;
+using RealEstate.API.Modules.User.Validator;
+using RealEstate.API.Modules.User.Service;
+
+// Property Service
+using RealEstate.API.Modules.Property.Dto;
+using RealEstate.API.Modules.Property.Validator;
+using RealEstate.API.Modules.Property.Service;
+
+// Owner Service
+using RealEstate.API.Modules.Owner.Dto;
+using RealEstate.API.Modules.Owner.Validator;
+using RealEstate.API.Modules.Owner.Service;
+
+// PropertyTrace Service
+using RealEstate.API.Modules.PropertyImage.Dto;
+using RealEstate.API.Modules.PropertyImage.Validator;
+using RealEstate.API.Modules.PropertyImage.Service;
+
+// PropertyTrace Service
+using RealEstate.API.Modules.PropertyTrace.Dto;
+using RealEstate.API.Modules.PropertyTrace.Validator;
+using RealEstate.API.Modules.PropertyTrace.Service;
+
+// Mappings
+using RealEstate.API.Mappings;
+
 DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
 // ==========================================
-// 🔹 CONFIGURACIÓN DE SERVICIOS
+// 🔹 CONFIGURACIÓN DE MONGODB
 // ==========================================
-
-// MongoDB
 var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION") 
-    ?? "mongodb://localhost:27017";
+                            ?? "mongodb://localhost:27017";
 var mongoDbName = Environment.GetEnvironmentVariable("MONGO_DATABASE") 
-    ?? "RealEstateDb";
-var mongoClient = new MongoClient(mongoConnectionString);
-var database = mongoClient.GetDatabase(mongoDbName);
-builder.Services.AddSingleton(database);
+                  ?? "RealEstate";
 
-// Controladores + Newtonsoft + FluentValidation moderno
-builder.Services.AddControllers()
-    .AddNewtonsoftJson(options =>
-    {
-        options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        options.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
-        options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-    });
+if (string.IsNullOrWhiteSpace(mongoConnectionString))
+    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacía.");
 
-// FluentValidation actualizado
+if (string.IsNullOrWhiteSpace(mongoDbName))
+    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacía.");
+
+Console.WriteLine($"MongoDB Connection: {mongoConnectionString}");
+Console.WriteLine($"MongoDB Database: {mongoDbName}");
+
+builder.Services.AddSingleton<IMongoClient>(sp => new MongoClient(mongoConnectionString));
+builder.Services.AddSingleton(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    return client.GetDatabase(mongoDbName);
+});
+
+// ==========================================
+// 🔹 CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
+// ==========================================
+var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET") 
+                ?? throw new InvalidOperationException("La variable JWT_SECRET no está definida");
+var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "RealEstateAPI";
+var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "UsuariosAPI";
+var expiryMinutes = Environment.GetEnvironmentVariable("JWT_EXPIRY") ?? "60";
+
+// Mapear a IConfiguration para que JwtService funcione igual
+builder.Configuration["JwtSettings:SecretKey"] = secretKey;
+builder.Configuration["JwtSettings:Issuer"] = issuer;
+builder.Configuration["JwtSettings:Audience"] = audience;
+builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
+
+// ==========================================
+// 🔹 CONTROLADORES, VALIDACIONES Y FILTRO GLOBAL
+// ==========================================
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationExceptionFilter>();
+})
+.AddNewtonsoftJson(options =>
+{
+    options.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+    options.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+});
+
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Caché en memoria
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        return new BadRequestObjectResult(new
+        {
+            message = "Errores de validación",
+            errors
+        });
+    };
+});
+
+// ==========================================
+// 🔹 CACHÉ EN MEMORIA
+// ==========================================
 builder.Services.AddMemoryCache();
 
-// Servicios
-builder.Services.AddSingleton<PropertyService>(sp =>
-{
-    var cache = sp.GetRequiredService<IMemoryCache>();
-    return new PropertyService(builder.Configuration, cache);
-});
-builder.Services.AddSingleton<UserService>();
+// ==========================================
+// 🔹 MICROSERVICIOS
+// ==========================================
+
+// Auth
+builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
+builder.Services.AddScoped<AuthService>();
+
+// // Properties
+// builder.Services.AddSingleton<PropertiesService>(sp =>
+// {
+//     var cache = sp.GetRequiredService<IMemoryCache>();
+//     var env = sp.GetRequiredService<IWebHostEnvironment>();
+//     return new PropertiesService(builder.Configuration, cache, env);
+// });
+
+// User
+builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
+builder.Services.AddScoped<UserService>();
+
+// PropertyTrace
+builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
+builder.Services.AddScoped<PropertyService>();
+
+// Owner
+builder.Services.AddScoped<IValidator<OwnerDto>, OwnerDtoValidator>();
+builder.Services.AddScoped<OwnerService>();
+
+// PropertyTrace
+builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
+builder.Services.AddScoped<PropertyImageService>();
+
+// PropertyTrace
+builder.Services.AddScoped<IValidator<PropertyTraceDto>, PropertyTraceDtoValidator>();
+builder.Services.AddScoped<PropertyTraceService>();
+
+// JWT Service
 builder.Services.AddSingleton<JwtService>();
 
-// AutoMapper
+// ==========================================
+// 🔹 AUTOMAPPER
+// ==========================================
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// CORS global (permitir todo en desarrollo)
+// ==========================================
+// 🔹 CORS GLOBAL
+// ==========================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -72,18 +188,9 @@ builder.Services.AddCors(options =>
 });
 
 // ==========================================
-// 🔹 CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
+// 🔹 CONFIGURACIÓN JWT PARA AUTENTICACIÓN
 // ==========================================
-var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET") 
-    ?? "ClaveSuperSecretaMuyLarga123!";
-var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
-    ?? "RealEstateAPI";
-var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
-    ?? "UsuariosAPI";
-var expiryMinutes = Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60";
-
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -93,18 +200,16 @@ builder.Services.AddAuthentication(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = issuer,
-        ValidAudience = audience,
         IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
+        ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
 });
-
-builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddAuthorization();
 
@@ -119,13 +224,12 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseMiddleware<ErrorHandlerMiddleware>();
-
-app.UseAuthentication();   // 🔹 JWT
+app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers().RequireCors("AllowAll");
-
-// Mapear controladores
+// ==========================================
+// 🔹 CONTROLADORES
+// ==========================================
 app.MapControllers();
 
 // ==========================================

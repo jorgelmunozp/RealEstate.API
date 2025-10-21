@@ -1,20 +1,22 @@
 using AutoMapper;
-using RealEstate.API.Models;
-using RealEstate.API.Dtos;
-
+using RealEstate.API.Modules.Property.Model;
+using RealEstate.API.Modules.Property.Dto;
+using RealEstate.API.Modules.Owner.Model;
+using RealEstate.API.Modules.Owner.Dto;
+using RealEstate.API.Modules.PropertyImage.Model;
+using RealEstate.API.Modules.PropertyImage.Dto;
+using RealEstate.API.Modules.PropertyTrace.Model;
+using RealEstate.API.Modules.PropertyTrace.Dto;
 namespace RealEstate.API.Mappings
 {
     public class MappingProfile : Profile
     {
         public MappingProfile()
         {
-            // Propiedad principal
-            CreateMap<Property, PropertyDto>();
-
-            // Subobjetos
-            CreateMap<Owner, OwnerDto>();
-            CreateMap<PropertyImage, PropertyImageDto>();
-            CreateMap<PropertyTrace, PropertyTraceDto>();
+            CreateMap<PropertyModel, PropertyDto>();
+            CreateMap<OwnerModel, OwnerDto>();
+            CreateMap<PropertyImageModel, PropertyImageDto>();
+            CreateMap<PropertyTraceModel, PropertyTraceDto>();
         }
     }
 }
