@@ -10,22 +10,19 @@ namespace RealEstate.API.Modules.PropertyTrace.Model
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
 
-        [BsonElement("idPropertyTrace")]
-        public string IdPropertyTrace { get; set; } = string.Empty;
-
-        [BsonElement("dateSale")]
+        [BsonElement("DateSale")]
         public string DateSale { get; set; } = string.Empty;
 
-        [BsonElement("name")]
+        [BsonElement("Name")]
         public string Name { get; set; } = string.Empty;
 
-        [BsonElement("value")]
+        [BsonElement("Value")]
         public long Value { get; set; }
 
-        [BsonElement("tax")]
+        [BsonElement("Tax")]
         public long Tax { get; set; }
                 
-        [BsonElement("idProperty")]
+        [BsonElement("IdProperty")]
         public string IdProperty { get; set; } = string.Empty;
     }
 }

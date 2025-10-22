@@ -5,31 +5,27 @@ namespace RealEstate.API.Modules.Property.Model
 {
     public class PropertyModel
     {
-        // MongoDB _id (interno)
+        // MongoDB Id (interno)
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
 
-        // ID de negocio, único para tu app
-        [BsonElement("idProperty")]
-        public string IdProperty { get; set; } = string.Empty;
-
-        [BsonElement("name")]
+        [BsonElement("Name")]
         public string Name { get; set; } = string.Empty;
 
-        [BsonElement("address")]
+        [BsonElement("Address")]
         public string Address { get; set; } = string.Empty;
 
-        [BsonElement("price")]
+        [BsonElement("Price")]
         public long Price { get; set; }
 
-        [BsonElement("codeInternal")]
+        [BsonElement("CodeInternal")]
         public int CodeInternal { get; set; }
 
-        [BsonElement("year")]
+        [BsonElement("Year")]
         public int Year { get; set; }
 
-        [BsonElement("owner")]
+        [BsonElement("IdOwner")]
         public string IdOwner { get; set; } = string.Empty;
     }
 }

@@ -9,17 +9,14 @@ namespace RealEstate.API.Modules.PropertyImage.Model
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
-        
-        [BsonElement("idPropertyImage")]
-        public string IdPropertyImage { get; set; } = string.Empty;
 
-        [BsonElement("file")]
+        [BsonElement("File")]
         public string File { get; set; } = string.Empty;
 
-        [BsonElement("enabled")]
+        [BsonElement("Enabled")]
         public bool Enabled { get; set; } = true;
 
-        [BsonElement("idProperty")]
+        [BsonElement("IdProperty")]
         public string IdProperty { get; set; } = string.Empty;        
     }
 }

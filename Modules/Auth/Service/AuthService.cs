@@ -37,7 +37,7 @@ namespace RealEstate.API.Modules.Auth.Service
         //********* AUTENTICAR USUARIO *********//
         public async Task<string> LoginAsync(LoginDto loginDto)
         {
-            // 1️⃣ Validar DTO
+            // Valida DTO
             var validationResult = await _validator.ValidateAsync(loginDto);
             if (!validationResult.IsValid)
             {
@@ -65,7 +65,7 @@ namespace RealEstate.API.Modules.Auth.Service
         //********* REGISTRAR USUARIO *********//
         public async Task<ValidationResult> RegisterAsync(UserDto userDto)
         {
-            // 1️⃣ Validar si el usuario ya existe
+            // Valida si el usuario ya existe
             var existingUser = await _userService.GetByEmailAsync(userDto.Email);
             if (existingUser != null)
             {

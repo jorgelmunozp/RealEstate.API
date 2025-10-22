@@ -134,7 +134,6 @@ namespace RealEstate.API.Modules.Properties.Controller
         {
             return new PropertyModel
             {
-                IdProperty = dto.IdProperty,
                 Name = dto.Name,
                 Address = dto.Address,
                 Price = dto.Price,

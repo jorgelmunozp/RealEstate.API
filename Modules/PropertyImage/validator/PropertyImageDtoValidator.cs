@@ -8,7 +8,6 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
     {
         public PropertyImageDtoValidator()
         {
-            RuleFor(p => p.IdPropertyImage).NotEmpty().WithMessage("El Id de la imagen es obligatorio");
             RuleFor(p => p.File).NotEmpty().WithMessage("La imagen es obligatoria");
             RuleFor(p => p.IdProperty).NotEmpty().WithMessage("El Id de la propiedad es obligatorio");
 

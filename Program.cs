@@ -24,6 +24,7 @@ using RealEstate.API.Modules.User.Service;
 
 // Property Service
 using RealEstate.API.Modules.Property.Dto;
+using RealEstate.API.Modules.Property.Model;
 using RealEstate.API.Modules.Property.Validator;
 using RealEstate.API.Modules.Property.Service;
 
@@ -150,7 +151,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<UserService>();
 
-// PropertyTrace
+// Property
+builder.Services.AddScoped<IValidator<PropertyModel>, PropertyModelValidator>();
 builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
 builder.Services.AddScoped<PropertyService>();
 
@@ -158,7 +160,7 @@ builder.Services.AddScoped<PropertyService>();
 builder.Services.AddScoped<IValidator<OwnerDto>, OwnerDtoValidator>();
 builder.Services.AddScoped<OwnerService>();
 
-// PropertyTrace
+// PropertyImage
 builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
 builder.Services.AddScoped<PropertyImageService>();
 

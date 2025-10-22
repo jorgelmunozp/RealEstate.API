@@ -8,7 +8,6 @@ namespace RealEstate.API.Modules.PropertyTrace.Validator
     {
         public PropertyTraceDtoValidator()
         {
-            RuleFor(p => p.IdPropertyTrace).NotEmpty().WithMessage("El Id del registro de propiedad es obligatorio");
             RuleFor(p => p.DateSale).NotEmpty().WithMessage("La fecha de venta es obligatoria");
             RuleFor(p => p.Name).NotEmpty().WithMessage("El nombre es obligatorio");
             RuleFor(p => p.Value).GreaterThan(0).WithMessage("El valor debe ser mayor a 0");

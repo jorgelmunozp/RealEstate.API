@@ -11,7 +11,6 @@ namespace RealEstate.API.Modules.Property.Validator
     {
         public PropertyDtoValidator()
         {
-            RuleFor(p => p.IdProperty).NotEmpty().WithMessage("El Id de la propiedad es obligatorio");
             RuleFor(p => p.Name).NotEmpty().WithMessage("El nombre de la propiedad es obligatorio");
             RuleFor(p => p.Address).NotEmpty().WithMessage("La dirección de la propiedad es obligatoria");
             RuleFor(p => p.Price).GreaterThan(0).WithMessage("El precio debe ser mayor a 0");

@@ -26,7 +26,7 @@ namespace RealEstate.API.Modules.Auth.Controller
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            // 1️⃣ Validar DTO
+            // Valida DTO
             ValidationResult validationResult = await _validator.ValidateAsync(loginDto);
             if (!validationResult.IsValid)
             {

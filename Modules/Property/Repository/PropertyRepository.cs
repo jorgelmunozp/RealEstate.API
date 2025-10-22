@@ -31,7 +31,7 @@ namespace RealEstate.API.Modules.Property.Repository
 
         // Obtener por Id
         public async Task<PropertyModel?> GetByIdAsync(string id) =>
-            await _collection.Find(p => p.IdProperty == id).FirstOrDefaultAsync();
+            await _collection.Find(p => p.Id == id).FirstOrDefaultAsync();
 
         // Crear nueva propiedad
         public async Task CreateAsync(PropertyModel property) =>
@@ -40,19 +40,19 @@ namespace RealEstate.API.Modules.Property.Repository
         // Actualizar propiedad
         public async Task<bool> UpdateAsync(string id, PropertyModel property)
         {
-            var result = await _collection.ReplaceOneAsync(p => p.IdProperty == id, property);
+            var result = await _collection.ReplaceOneAsync(p => p.Id == id, property);
             return result.ModifiedCount > 0;
         }
 
         // Eliminar propiedad
         public async Task<bool> DeleteAsync(string id)
         {
-            var result = await _collection.DeleteOneAsync(p => p.IdProperty == id);
+            var result = await _collection.DeleteOneAsync(p => p.Id == id);
             return result.DeletedCount > 0;
         }
 
         // Comprobar si existe
         public async Task<bool> ExistsAsync(string id) =>
-            await _collection.CountDocumentsAsync(p => p.IdProperty == id) > 0;
+            await _collection.CountDocumentsAsync(p => p.Id == id) > 0;
     }
 }

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.Property.Dto;
 using RealEstate.API.Modules.Property.Service;
 
@@ -15,55 +17,108 @@ namespace RealEstate.API.Modules.Property.Controller
             _service = service;
         }
 
-        // GET: api/property
+        // ===========================================================
+        // 🔹 GET: api/property  (con filtros, paginación y caché)
+        // ===========================================================
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string? name,
+            [FromQuery] string? address,
+            [FromQuery] string? idOwner,
+            [FromQuery] long? minPrice,
+            [FromQuery] long? maxPrice,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 6)
+        {
+            var result = await _service.GetCachedAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
+            return Ok(result);
+        }
 
-        // GET: api/property/{id}
+        // ===========================================================
+        // 🔹 GET: api/property/{id}
+        // ===========================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
             var property = await _service.GetByIdAsync(id);
-            if (property == null) return NotFound(new { Message = "Propiedad no encontrada" });
+            if (property == null) return NotFound(new { message = "Propiedad no encontrada" });
+
             return Ok(property);
         }
 
-        // POST: api/property
+        // ===========================================================
+        // 🔹 POST: api/property
+        // ===========================================================
         [HttpPost]
+        // [Authorize]
         public async Task<IActionResult> Create([FromBody] PropertyDto property)
         {
-            var result = await _service.CreateAsync(property);
-            if (!result.IsValid) return BadRequest(result.Errors.Select(e => e.ErrorMessage));
-
-            return CreatedAtAction(nameof(GetById), new { id = property.IdProperty }, property);
+            var id = await _service.CreateAsync(property);
+            return CreatedAtAction(nameof(GetById), new { id }, new { Id = id });
         }
 
-        // PUT: api/property/{id}
+        // ===========================================================
+        // 🔹 PUT: api/property/{id}
+        // ===========================================================
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto property)
         {
             var result = await _service.UpdateAsync(id, property);
             if (!result.IsValid)
             {
-                if (result.Errors.Any(e => e.PropertyName == "IdProperty"))
-                    return NotFound(new { Message = "Propiedad no encontrada" });
+                if (result.Errors.Any(e => e.PropertyName == "Id"))
+                    return NotFound(new { message = "Propiedad no encontrada" });
 
                 return BadRequest(result.Errors.Select(e => e.ErrorMessage));
             }
 
-            var updatedProperty = await _service.GetByIdAsync(id);
-            return Ok(updatedProperty);
+            var updated = await _service.GetByIdAsync(id);
+            return Ok(updated);
         }
 
-        // DELETE: api/property/{id}
+        // ===========================================================
+        // 🔹 PATCH: api/property/{id}
+        // ===========================================================
+        [HttpPatch("{id}")]
+        [Authorize]
+        public async Task<IActionResult> Patch(string id, [FromBody] JsonPatchDocument<PropertyDto> patchDoc)
+        {
+            if (patchDoc == null)
+                return BadRequest(new { message = "Documento PATCH inválido" });
+
+            var existingDto = await _service.GetByIdAsync(id);
+            if (existingDto == null)
+                return NotFound(new { message = "Propiedad no encontrada" });
+
+            patchDoc.ApplyTo(existingDto, e =>
+            {
+                ModelState.AddModelError(e.AffectedObject?.ToString() ?? string.Empty, e.ErrorMessage);
+            });
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var updateResult = await _service.UpdateAsync(id, existingDto);
+            if (!updateResult.IsValid)
+                return BadRequest(updateResult.Errors.Select(e => e.ErrorMessage));
+
+            var updated = await _service.GetByIdAsync(id);
+            return Ok(updated);
+        }
+
+
+        // ===========================================================
+        // 🔹 DELETE: api/property/{id}
+        // ===========================================================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
-            bool deleted = await _service.DeleteAsync(id);
-            if (!deleted) return NotFound(new { Message = "Propiedad no encontrada" });
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted) return NotFound(new { message = "Propiedad no encontrada" });
 
-            return NoContent();
+            return Ok(new { message = "Propiedad eliminada correctamente" });
         }
     }
 }

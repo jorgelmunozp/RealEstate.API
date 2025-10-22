@@ -102,33 +102,32 @@ namespace RealEstate.API.Modules.Properties.Service
         // ===========================================================
         // 🔹 Obtener por ID
         // ===========================================================
-        public async Task<PropertyDto?> GetByIdAsync(string id)
+        public async Task<PropertyDto?> GetByIdAsync(string Id)
         {
-            if (!ObjectId.TryParse(id, out _))
-                throw new Exception($"El id '{id}' no es válido.");
+            if (!ObjectId.TryParse(Id, out _))
+                throw new Exception($"El Id '{Id}' no es válido.");
 
-            var property = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+            var property = await _properties.Find(p => p.Id == Id).FirstOrDefaultAsync();
             return property != null ? MapToDto(property) : null;
         }
 
         // ===========================================================
         // 🔹 Actualizar (con posible nueva imagen)
         // ===========================================================
-        public async Task<PropertyModel?> UpdateAsync(string id, PropertyModel updatedProperty)
+        public async Task<PropertyModel?> UpdateAsync(string Id, PropertyModel updatedProperty)
         {
             // 🔹 Obtener propiedad existente
-            var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+            var existing = await _properties.Find(p => p.Id == Id).FirstOrDefaultAsync();
             if (existing == null)
                 return null;
 
             // 🔹 Mantener IDs correctos
             updatedProperty.Id = existing.Id;
-            if (string.IsNullOrEmpty(updatedProperty.IdProperty))
-                updatedProperty.IdProperty = existing.IdProperty;
+            if (string.IsNullOrEmpty(updatedProperty.Id))
+                updatedProperty.Id = existing.Id;
 
             // 🔹 Nota: Owner.Photo se maneja en el Controller
-
-            await _properties.ReplaceOneAsync(p => p.Id == id, updatedProperty);
+            await _properties.ReplaceOneAsync(p => p.Id == Id, updatedProperty);
             return updatedProperty;
         }
 
@@ -185,12 +184,12 @@ namespace RealEstate.API.Modules.Properties.Service
         // ===========================================================
         // 🔹 Eliminar propiedad
         // ===========================================================
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<bool> DeleteAsync(string Id)
         {
-            if (!ObjectId.TryParse(id, out _))
-                throw new Exception($"El id '{id}' no es válido.");
+            if (!ObjectId.TryParse(Id, out _))
+                throw new Exception($"El Id '{Id}' no es válido.");
 
-            var result = await _properties.DeleteOneAsync(p => p.Id == id);
+            var result = await _properties.DeleteOneAsync(p => p.Id == Id);
             return result.DeletedCount > 0;
         }
 
@@ -201,7 +200,6 @@ namespace RealEstate.API.Modules.Properties.Service
         {
             return new PropertyDto
             {
-                IdProperty = property.IdProperty ?? property.Id,
                 Name = property.Name,
                 Address = property.Address,
                 Price = property.Price,

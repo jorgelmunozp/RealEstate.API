@@ -38,10 +38,8 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PropertyImageDto image)
         {
-            var result = await _service.CreateAsync(image);
-            if (!result.IsValid) return BadRequest(result.Errors.Select(e => e.ErrorMessage));
-
-            return CreatedAtAction(nameof(GetById), new { id = image.IdPropertyImage }, image);
+            var id = await _service.CreateAsync(image);
+            return CreatedAtAction(nameof(GetById), new { id }, new { Id = id });
         }
 
         // PUT: api/propertyimage/{id}
@@ -51,7 +49,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             var result = await _service.UpdateAsync(id, image);
             if (!result.IsValid)
             {
-                if (result.Errors.Any(e => e.PropertyName == "IdPropertyImage"))
+                if (result.Errors.Any(e => e.PropertyName == "Id"))
                     return NotFound(new { Message = "Imagen no encontrada" });
 
                 return BadRequest(result.Errors.Select(e => e.ErrorMessage));

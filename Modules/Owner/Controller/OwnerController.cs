@@ -29,9 +29,8 @@ namespace RealEstate.API.Modules.Owner.Controller
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] OwnerDto owner)
         {
-            var result = await _service.CreateAsync(owner);
-            if (!result.IsValid) return BadRequest(result.Errors.Select(e => e.ErrorMessage));
-            return CreatedAtAction(nameof(GetById), new { id = owner.IdOwner }, owner);
+            var id = await _service.CreateAsync(owner);
+            return CreatedAtAction(nameof(GetById), new { id }, new { Id = id });
         }
 
         [HttpPut("{id}")]
@@ -40,7 +39,7 @@ namespace RealEstate.API.Modules.Owner.Controller
             var result = await _service.UpdateAsync(id, owner);
             if (!result.IsValid)
             {
-                if (result.Errors.Any(e => e.PropertyName == "IdOwner"))
+                if (result.Errors.Any(e => e.PropertyName == "Id"))
                     return NotFound(new { Message = "Propietario no encontrado" });
                 return BadRequest(result.Errors.Select(e => e.ErrorMessage));
             }

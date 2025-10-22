@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.User.Dto;
 using RealEstate.API.Modules.User.Service;
 
@@ -17,11 +18,13 @@ namespace RealEstate.API.Modules.User.Controller
 
         // GET: api/user
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetAll() =>
             Ok(await _service.GetAllAsync());
 
         // GET: api/user/{email}
         [HttpGet("{email}")]
+        [Authorize]
         public async Task<IActionResult> GetByEmail(string email)
         {
             var user = await _service.GetByEmailAsync(email);
@@ -41,6 +44,7 @@ namespace RealEstate.API.Modules.User.Controller
 
         // PUT: api/user/{email}
         [HttpPut("{email}")]
+        [Authorize]
         public async Task<IActionResult> Update(string email, [FromBody] UserDto user)
         {
             var result = await _service.UpdateAsync(email, user);
@@ -58,6 +62,7 @@ namespace RealEstate.API.Modules.User.Controller
 
         // DELETE: api/user/{email}
         [HttpDelete("{email}")]
+        [Authorize]
         public async Task<IActionResult> Delete(string email)
         {
             bool deleted = await _service.DeleteAsync(email);

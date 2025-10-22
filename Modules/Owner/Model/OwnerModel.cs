@@ -10,19 +10,16 @@ namespace RealEstate.API.Modules.Owner.Model
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;
         
-        [BsonElement("idOwner")]
-        public string IdOwner { get; set; } = string.Empty;
-
-        [BsonElement("name")]
+        [BsonElement("Name")]
         public string Name { get; set; } = string.Empty;
 
-        [BsonElement("address")]
+        [BsonElement("Address")]
         public string Address { get; set; } = string.Empty;
 
-        [BsonElement("photo")]
+        [BsonElement("Photo")]
         public string Photo { get; set; } = string.Empty;
 
-        [BsonElement("birthday")]
+        [BsonElement("Birthday")]
         public string Birthday { get; set; } = string.Empty;
     }
 }

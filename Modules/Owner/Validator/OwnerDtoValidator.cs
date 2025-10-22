@@ -9,7 +9,6 @@ namespace RealEstate.API.Modules.Owner.Validator
     {
         public OwnerDtoValidator()
         {
-            RuleFor(o => o.IdOwner).NotEmpty().WithMessage("El Id del propietario es obligatorio");
             RuleFor(o => o.Name).NotEmpty().WithMessage("El nombre es obligatorio");
             RuleFor(o => o.Address).NotEmpty().WithMessage("La dirección es obligatoria");
             RuleFor(o => o.Photo).NotEmpty().WithMessage("La foto es obligatoria");
