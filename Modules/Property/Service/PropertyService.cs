@@ -107,14 +107,17 @@ namespace RealEstate.API.Modules.Property.Service
 
             var (data, totalItems) = await GetAllWithMetaAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
 
-            var result = new
-            {
-                page,
-                limit,
-                totalItems,
-                totalPages = (int)Math.Ceiling((double)totalItems / limit),
-                data
-            };
+    var result = new
+    {
+        data = data, // tu lista de propiedades
+        meta = new
+        {
+            page = page,
+            limit = limit,
+            total = totalItems,
+            last_page = (int)Math.Ceiling((double)totalItems / limit)
+        }
+    };
 
             _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
             return result;

@@ -1,9 +1,19 @@
 using FluentValidation;
 using RealEstate.API.Modules.PropertyTrace.Dto;
+using System.Collections.Generic;
 
 namespace RealEstate.API.Modules.PropertyTrace.Validator
 {
-    // ✅ Validator para PropertyTraceDto
+    // ✅ Validator para un arreglo de PropertyTraceDto
+    public class PropertyTraceArrayValidator : AbstractValidator<IEnumerable<PropertyTraceDto>>
+    {
+        public PropertyTraceArrayValidator()
+        {
+            RuleForEach(traces => traces).SetValidator(new PropertyTraceDtoValidator());
+        }
+    }
+
+    // Validator individual sigue igual
     public class PropertyTraceDtoValidator : AbstractValidator<PropertyTraceDto>
     {
         public PropertyTraceDtoValidator()
