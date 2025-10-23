@@ -107,18 +107,28 @@ namespace RealEstate.API.Modules.Property.Service
 
             var (data, totalItems) = await GetAllWithMetaAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
 
-    var result = new
-    {
-        data = data, // tu lista de propiedades
-        meta = new
-        {
-            page = page,
-            limit = limit,
-            total = totalItems,
-            last_page = (int)Math.Ceiling((double)totalItems / limit)
-        }
-    };
-
+            // Mapea _id de Mongo a IdProperty solo para la respuesta
+            var result = new
+            {
+                data = data.Select(p => new
+                {
+                    idProperty = p.IdProperty,
+                    name = p.Name,
+                    address = p.Address,
+                    price = p.Price,
+                    year = p.Year,
+                    codeInternal = p.CodeInternal,
+                    idOwner = p.IdOwner
+                }).ToList(),
+                meta = new
+                {
+                    page = page,
+                    limit = limit,
+                    total = totalItems,
+                    last_page = (int)Math.Ceiling((double)totalItems / limit)
+                }
+            };
+    
             _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
             return result;
         }

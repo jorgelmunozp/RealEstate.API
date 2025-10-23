@@ -9,6 +9,7 @@ namespace RealEstate.API.Modules.Property.Mapper
         // De Model → DTO
         public static PropertyDto ToDto(this PropertyModel model) => new()
         {
+            IdProperty = model.Id,
             Name = model.Name,
             Address = model.Address,
             Price = model.Price,
