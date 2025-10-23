@@ -46,6 +46,8 @@ using RealEstate.API.Modules.PropertyTrace.Service;
 // Mappings
 using RealEstate.API.Mappings;
 
+
+
 DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -74,6 +76,15 @@ builder.Services.AddSingleton(sp =>
     return client.GetDatabase(mongoDbName);
 });
 
+
+
+// Deshabilita la conversión a camelCase
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = null;
+    });
 // ==========================================
 // 🔹 CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
 // ==========================================
@@ -139,14 +150,6 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<AuthService>();
 
-// // Properties
-// builder.Services.AddSingleton<PropertiesService>(sp =>
-// {
-//     var cache = sp.GetRequiredService<IMemoryCache>();
-//     var env = sp.GetRequiredService<IWebHostEnvironment>();
-//     return new PropertiesService(builder.Configuration, cache, env);
-// });
-
 // User
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<UserService>();
@@ -170,12 +173,6 @@ builder.Services.AddScoped<PropertyTraceService>();
 
 // JWT Service
 builder.Services.AddSingleton<JwtService>();
-
-// ==========================================
-// 🔹 AUTOMAPPER
-// ==========================================
-builder.Services.AddAutoMapper(typeof(MappingProfile));
-
 // ==========================================
 // 🔹 CORS GLOBAL
 // ==========================================
@@ -215,6 +212,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+
+// Limpiar providers y añadir consola para los logs con formato HALL
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 // ==========================================
 // 🔹 CONSTRUCCIÓN DE LA APP
 // ==========================================
@@ -223,9 +224,14 @@ var app = builder.Build();
 // ==========================================
 // 🔹 MIDDLEWARE
 // ==========================================
+// Middleware de logging HALL - Backend Logs
+app.UseMiddleware<LoggingMiddleware>();
+
+// Middleware de errores HTTP - Frontend Logs
+app.UseMiddleware<ErrorHandlerMiddleware>();
+
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-app.UseMiddleware<ErrorHandlerMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -20,7 +20,7 @@ namespace RealEstate.API.Middleware
 
                 context.Result = new BadRequestObjectResult(new
                 {
-                    message = "Errores de validación",
+                    message = "Error de validación",
                     errors
                 });
 
