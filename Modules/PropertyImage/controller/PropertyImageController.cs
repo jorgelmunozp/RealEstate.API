@@ -15,10 +15,17 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             _service = service;
         }
 
-        // GET: api/propertyimage
+        // GET: api/propertyimage?idProperty
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string? idProperty,
+            [FromQuery] bool? enabled,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 10)
+        {
+            var result = await _service.GetAllAsync(idProperty, enabled, page, limit);
+            return Ok(result);
+        }
 
         // GET: api/propertyimage/{id}
         [HttpGet("{id}")]
@@ -29,7 +36,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             return Ok(image);
         }
 
-        // GET: api/propertyimage/property/{propertyId}
+        // GET: api/propertyimage/?idProperty=
         [HttpGet("property/{propertyId}")]
         public async Task<IActionResult> GetByPropertyId(string propertyId) =>
             Ok(await _service.GetByPropertyIdAsync(propertyId));

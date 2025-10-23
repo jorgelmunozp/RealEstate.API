@@ -22,7 +22,6 @@ namespace RealEstate.API.Modules.PropertyTrace.Validator
             RuleFor(p => p.Name).NotEmpty().WithMessage("El nombre es obligatorio");
             RuleFor(p => p.Value).GreaterThan(0).WithMessage("El valor debe ser mayor a 0");
             RuleFor(p => p.Tax).GreaterThanOrEqualTo(0).WithMessage("El impuesto no puede ser negativo");
-            RuleFor(p => p.IdProperty).NotEmpty().WithMessage("El Id de la propiedad es obligatorio");
         }
     }
 }

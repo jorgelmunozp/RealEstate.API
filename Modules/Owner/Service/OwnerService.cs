@@ -21,10 +21,24 @@ namespace RealEstate.API.Modules.Owner.Service
             _validator = validator;
         }
 
-        public async Task<List<OwnerDto>> GetAllAsync()
+public async Task<OwnerDto> GetAsync(
+            string? name = null,
+            string? address = null)
         {
-            var owners = await _owners.Find(_ => true).ToListAsync();
-            return owners.Select(o => OwnerMapper.ToDto(o)).ToList();
+            var filter = Builders<OwnerModel>.Filter.Empty;
+
+            if (!string.IsNullOrEmpty(name))
+                filter &= Builders<OwnerModel>.Filter.Regex(o => o.Name, new MongoDB.Bson.BsonRegularExpression(name, "i"));
+
+            if (!string.IsNullOrEmpty(address))
+                filter &= Builders<OwnerModel>.Filter.Regex(o => o.Address, new MongoDB.Bson.BsonRegularExpression(address, "i"));
+
+            var owner = await _owners.Find(filter).FirstOrDefaultAsync();
+
+            if (owner == null)
+                return null; // o new OwnerDto() según tu lógica
+
+            return OwnerMapper.ToDto(owner);
         }
 
         public async Task<OwnerDto?> GetByIdAsync(string id)

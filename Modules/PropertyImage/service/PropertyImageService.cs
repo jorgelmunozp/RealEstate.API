@@ -22,10 +22,26 @@ namespace RealEstate.API.Modules.PropertyImage.Service
         }
 
         // Obtener todas las imágenes
-        public async Task<List<PropertyImageDto>> GetAllAsync()
+        public async Task<IEnumerable<PropertyImageDto>> GetAllAsync(
+            string? idProperty = null,
+            bool? enabled = null,
+            int page = 1,
+            int limit = 6)
         {
-            var images = await _images.Find(_ => true).ToListAsync();
-            return images.Select(i => PropertyImageMapper.ToDto(i)).ToList();
+            var filter = Builders<PropertyImageModel>.Filter.Empty;
+
+            if (!string.IsNullOrEmpty(idProperty))
+                filter &= Builders<PropertyImageModel>.Filter.Eq(i => i.IdProperty, idProperty);
+
+            if (enabled.HasValue)
+                filter &= Builders<PropertyImageModel>.Filter.Eq(i => i.Enabled, enabled.Value);
+
+            var images = await _images.Find(filter)
+                                      .Skip((page - 1) * limit)
+                                      .Limit(limit)
+                                      .ToListAsync();
+
+            return images.Select(PropertyImageMapper.ToDto);
         }
 
         // Obtener imagen por Id
@@ -37,10 +53,13 @@ namespace RealEstate.API.Modules.PropertyImage.Service
 
 
         // Obtener imágenes por Id de propiedad
-        public async Task<List<PropertyImageDto>> GetByPropertyIdAsync(string propertyId)
+        public async Task<PropertyImageDto> GetByPropertyIdAsync(string propertyId)
         {
-            var images = await _images.Find(p => p.IdProperty == propertyId).ToListAsync();
-            return images.Select(i => PropertyImageMapper.ToDto(i)).ToList();
+            var image = await _images.Find(i => i.IdProperty == propertyId).FirstOrDefaultAsync();
+
+            if (image == null) return null;
+            
+            return PropertyImageMapper.ToDto(image);
         }
         // Crear nueva imagen
         public async Task<string> CreateAsync(PropertyImageDto image)

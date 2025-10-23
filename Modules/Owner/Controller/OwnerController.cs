@@ -15,8 +15,19 @@ namespace RealEstate.API.Modules.Owner.Controller
             _service = service;
         }
 
+        // GET api/owner?name=...&address=...
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string? name,
+            [FromQuery] string? address)
+        {
+            var result = await _service.GetAsync(name, address);
+
+            if (result == null)
+                return NotFound(new { Message = "No owner found with the given criteria." });
+
+            return Ok(result);
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)

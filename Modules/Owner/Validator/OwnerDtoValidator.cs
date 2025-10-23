@@ -9,10 +9,10 @@ namespace RealEstate.API.Modules.Owner.Validator
     {
         public OwnerDtoValidator()
         {
-            RuleFor(o => o.Name).NotEmpty().WithMessage("El nombre es obligatorio");
-            RuleFor(o => o.Address).NotEmpty().WithMessage("La dirección es obligatoria");
-            RuleFor(o => o.Photo).NotEmpty().WithMessage("La foto es obligatoria");
-            RuleFor(o => o.Birthday).NotEmpty().WithMessage("El cumpleaños es obligatorio");
+            RuleFor(o => o.Name).NotEmpty().WithMessage("El nombre del propietario es obligatorio");
+            RuleFor(o => o.Address).NotEmpty().WithMessage("La dirección del propietario es obligatoria");
+            RuleFor(o => o.Photo).NotEmpty().WithMessage("La foto del propietario es obligatoria");
+            RuleFor(o => o.Birthday).NotEmpty().WithMessage("El cumpleaños del propietario es obligatorio");
         }
     }
 }
