@@ -9,50 +9,25 @@ namespace RealEstate.API.Modules.Property.Repository
 
         public PropertyRepository(IConfiguration config)
         {
-            // Leer variables de entorno
-            var mongoUri = config.GetValue<string>("MONGO_CONNECTION") 
-                           ?? throw new Exception("MONGO_CONNECTION no definida");
-            var dbName = config.GetValue<string>("MONGO_DATABASE") 
-                         ?? throw new Exception("MONGO_DATABASE no definida");
-            var collectionName = config.GetValue<string>("MONGO_COLLECTION_PROPERTY") 
-                                 ?? throw new Exception("MONGO_COLLECTION_PROPERTY no definida");
+            var mongoUri = config["MONGO_CONNECTION"] ?? throw new Exception("MONGO_CONNECTION no definida");
+            var dbName = config["MONGO_DATABASE"] ?? throw new Exception("MONGO_DATABASE no definida");
+            var collectionName = config["MONGO_COLLECTION_PROPERTY"] ?? throw new Exception("MONGO_COLLECTION_PROPERTY no definida");
 
-            // Crear cliente y obtener la base de datos
             var client = new MongoClient(mongoUri);
-            var database = client.GetDatabase(dbName);
-
-            // Obtener la colección
-            _collection = database.GetCollection<PropertyModel>(collectionName);
+            _collection = client.GetDatabase(dbName).GetCollection<PropertyModel>(collectionName);
         }
 
-        // Obtener todas las propiedades
-        public async Task<List<PropertyModel>> GetAllAsync() =>
-            await _collection.Find(_ => true).ToListAsync();
+        public async Task<List<PropertyModel>> GetAllAsync() => await _collection.Find(_ => true).ToListAsync();
+        public async Task<PropertyModel?> GetByIdAsync(string id) => await _collection.Find(p => p.Id == id).FirstOrDefaultAsync();
+        public async Task CreateAsync(PropertyModel property) => await _collection.InsertOneAsync(property);
 
-        // Obtener por Id
-        public async Task<PropertyModel?> GetByIdAsync(string id) =>
-            await _collection.Find(p => p.Id == id).FirstOrDefaultAsync();
-
-        // Crear nueva propiedad
-        public async Task CreateAsync(PropertyModel property) =>
-            await _collection.InsertOneAsync(property);
-
-        // Actualizar propiedad
         public async Task<bool> UpdateAsync(string id, PropertyModel property)
-        {
-            var result = await _collection.ReplaceOneAsync(p => p.Id == id, property);
-            return result.ModifiedCount > 0;
-        }
+            => (await _collection.ReplaceOneAsync(p => p.Id == id, property)).ModifiedCount > 0;
 
-        // Eliminar propiedad
         public async Task<bool> DeleteAsync(string id)
-        {
-            var result = await _collection.DeleteOneAsync(p => p.Id == id);
-            return result.DeletedCount > 0;
-        }
+            => (await _collection.DeleteOneAsync(p => p.Id == id)).DeletedCount > 0;
 
-        // Comprobar si existe
-        public async Task<bool> ExistsAsync(string id) =>
-            await _collection.CountDocumentsAsync(p => p.Id == id) > 0;
+        public async Task<bool> ExistsAsync(string id)
+            => await _collection.CountDocumentsAsync(p => p.Id == id) > 0;
     }
 }

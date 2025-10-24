@@ -4,7 +4,7 @@ using RealEstate.API.Modules.Owner.Dto;
 namespace RealEstate.API.Modules.Owner.Validator
 {
 
-    // ✅ Validator para OwnerDto
+    // Validator para OwnerDto
     public class OwnerDtoValidator : AbstractValidator<OwnerDto>
     {
         public OwnerDtoValidator()

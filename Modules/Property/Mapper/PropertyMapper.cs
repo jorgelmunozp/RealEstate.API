@@ -6,7 +6,6 @@ namespace RealEstate.API.Modules.Property.Mapper
 {
     public static class PropertyMapper
     {
-        // De Model → DTO
         public static PropertyDto ToDto(this PropertyModel model) => new()
         {
             IdProperty = model.Id,
@@ -18,16 +17,9 @@ namespace RealEstate.API.Modules.Property.Mapper
             IdOwner = model.IdOwner
         };
 
-        // Convierte una lista de modelos en una lista de DTOs
         public static List<PropertyDto> ToDtoList(IEnumerable<PropertyModel> models)
-        {
-            if (models == null || !models.Any())
-                return new List<PropertyDto>();
+            => models?.Select(ToDto).ToList() ?? new List<PropertyDto>();
 
-            return models.Select(m => ToDto(m)).ToList();
-        }
-
-        // De DTO → Model
         public static PropertyModel ToModel(this PropertyDto dto) => new()
         {
             Id = ObjectId.GenerateNewId().ToString(),
@@ -39,13 +31,7 @@ namespace RealEstate.API.Modules.Property.Mapper
             IdOwner = dto.IdOwner
         };
 
-        // Convierte una lista de DTOs en una lista de modelos
         public static List<PropertyModel> ToModelList(IEnumerable<PropertyDto> dtos)
-        {
-            if (dtos == null || !dtos.Any())
-                return new List<PropertyModel>();
-
-            return dtos.Select(d => ToModel(d)).ToList();
-        }
+            => dtos?.Select(ToModel).ToList() ?? new List<PropertyModel>();
     }
 }

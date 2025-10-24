@@ -1,12 +1,8 @@
 using FluentValidation;
 using RealEstate.API.Modules.Property.Dto;
-using RealEstate.API.Modules.Owner.Validator;
-using RealEstate.API.Modules.PropertyImage.Validator;
-using RealEstate.API.Modules.PropertyTrace.Validator;
 
 namespace RealEstate.API.Modules.Property.Validator
 {
-    // ✅ Validator para PropertyDto
     public class PropertyDtoValidator : AbstractValidator<PropertyDto>
     {
         public PropertyDtoValidator()

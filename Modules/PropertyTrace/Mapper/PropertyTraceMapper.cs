@@ -6,9 +6,10 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
 {
     public static class PropertyTraceMapper
     {
-        // De Model → DTO
+        // 🔹 Model → DTO
         public static PropertyTraceDto ToDto(this PropertyTraceModel model) => new()
         {
+            IdPropertyTrace = model.Id,
             DateSale = model.DateSale,
             Name = model.Name,
             Value = model.Value,
@@ -16,19 +17,12 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
             IdProperty = model.IdProperty
         };
 
-        // Convierte una lista de modelos en una lista de DTOs
-        public static List<PropertyTraceDto> ToDtoList(IEnumerable<PropertyTraceModel> models)
-        {
-            if (models == null || !models.Any())
-                return new List<PropertyTraceDto>();
-
-            return models.Select(m => ToDto(m)).ToList();
-        }
-
-        // De DTO → Model
+        // 🔹 DTO → Model
         public static PropertyTraceModel ToModel(this PropertyTraceDto dto) => new()
         {
-            Id = ObjectId.GenerateNewId().ToString(),
+            Id = string.IsNullOrEmpty(dto.IdPropertyTrace)
+                ? ObjectId.GenerateNewId().ToString() // solo genera si no existe
+                : dto.IdPropertyTrace,
             DateSale = dto.DateSale,
             Name = dto.Name,
             Value = dto.Value,
@@ -36,13 +30,11 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
             IdProperty = dto.IdProperty
         };
 
-        // Convierte una lista de DTOs en una lista de modelos
-        public static List<PropertyTraceModel> ToModelList(IEnumerable<PropertyTraceDto> dtos)
-        {
-            if (dtos == null || !dtos.Any())
-                return new List<PropertyTraceModel>();
+        // 🔹 Listas
+        public static List<PropertyTraceDto> ToDtoList(IEnumerable<PropertyTraceModel> models) =>
+            models?.Select(ToDto).ToList() ?? new();
 
-            return dtos.Select(d => ToModel(d)).ToList();
-        }
+        public static List<PropertyTraceModel> ToModelList(IEnumerable<PropertyTraceDto> dtos) =>
+            dtos?.Select(ToModel).ToList() ?? new();
     }
 }

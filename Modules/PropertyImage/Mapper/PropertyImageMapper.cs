@@ -1,20 +1,32 @@
+using MongoDB.Bson;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Model;
-using MongoDB.Bson;
 
 namespace RealEstate.API.Modules.PropertyImage.Mapper
 {
     public static class PropertyImageMapper
     {
-        // De Model → DTO
+        // 🔹 Model → DTO
         public static PropertyImageDto ToDto(this PropertyImageModel model) => new()
         {
+            Id = model.Id,
             File = model.File,
             Enabled = model.Enabled,
             IdProperty = model.IdProperty
         };
 
-        // Convierte una lista de modelos en una lista de DTOs
+        // 🔹 DTO → Model
+        public static PropertyImageModel ToModel(this PropertyImageDto dto) => new()
+        {
+            Id = string.IsNullOrEmpty(dto.Id)
+                ? ObjectId.GenerateNewId().ToString() // solo genera nuevo Id si no existe
+                : dto.Id,
+            File = dto.File ?? string.Empty,
+            Enabled = dto.Enabled,
+            IdProperty = dto.IdProperty ?? string.Empty
+        };
+
+        // 🔹 Convierte lista de modelos → DTOs
         public static List<PropertyImageDto> ToDtoList(IEnumerable<PropertyImageModel> models)
         {
             if (models == null || !models.Any())
@@ -23,16 +35,7 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
             return models.Select(m => ToDto(m)).ToList();
         }
 
-        // De DTO → Model
-        public static PropertyImageModel ToModel(this PropertyImageDto dto) => new()
-        {
-            Id = ObjectId.GenerateNewId().ToString(),
-            File = dto.File,
-            Enabled = dto.Enabled,
-            IdProperty = dto.IdProperty
-        };
-
-        // Convierte una lista de DTOs en una lista de modelos
+        // 🔹 Convierte lista de DTOs → Modelos
         public static List<PropertyImageModel> ToModelList(IEnumerable<PropertyImageDto> dtos)
         {
             if (dtos == null || !dtos.Any())
