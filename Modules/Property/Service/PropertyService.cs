@@ -1,11 +1,12 @@
 using MongoDB.Bson;
-using FluentValidation;
-using FluentValidation.Results;
 using MongoDB.Driver;
+using FluentValidation;
 using RealEstate.API.Modules.Property.Dto;
 using RealEstate.API.Modules.Property.Model;
 using RealEstate.API.Modules.Property.Mapper;
 using Microsoft.Extensions.Caching.Memory;
+using RealEstate.API.Infraestructure.Core.Logs; // donde tengas ServiceLogResponseWrapper<T>
+using System.Linq;
 
 namespace RealEstate.API.Modules.Property.Service
 {
@@ -24,7 +25,7 @@ namespace RealEstate.API.Modules.Property.Service
             _validator = validator;
             _cache = cache;
 
-            // Crear índices para mejorar búsquedas
+            // Índices para optimizar búsquedas
             _properties.Indexes.CreateOne(
                 new CreateIndexModel<PropertyModel>(
                     Builders<PropertyModel>.IndexKeys
@@ -36,62 +37,130 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // Obtener todas las propiedades (simple)
+        // GET ALL
         // ===========================================================
         public async Task<List<PropertyDto>> GetAllAsync()
         {
             var properties = await _properties.Find(_ => true).ToListAsync();
-            return properties.Select(p => PropertyMapper.ToDto(p)).ToList();
+            return properties.Select(PropertyMapper.ToDto).ToList();
         }
 
         // ===========================================================
-        // Obtener propiedad por Id
+        // GET BY ID
         // ===========================================================
         public async Task<PropertyDto?> GetByIdAsync(string id)
         {
             var property = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
             return property != null ? PropertyMapper.ToDto(property) : null;
         }
-        // ===========================================================
-        // Crear nueva propiedad
-        // ===========================================================
-        public async Task<string> CreateAsync(PropertyDto property)
-        {
-            var result = await _validator.ValidateAsync(property);
-            if (!result.IsValid) throw new ValidationException(result.Errors);
 
-            var model = property.ToModel();
-            await _properties.InsertOneAsync(model);
-            return model.Id;
+        // ===========================================================
+        // CREATE
+        // ===========================================================
+        public async Task<ServiceLogResponseWrapper<PropertyDto>> CreateAsync(PropertyDto dto)
+        {
+            try
+            {
+                var validation = await _validator.ValidateAsync(dto);
+                if (!validation.IsValid)
+                {
+                    return ServiceLogResponseWrapper<PropertyDto>.Fail(
+                        "Errores de validación",
+                        validation.Errors.Select(e => e.ErrorMessage)
+                    );
+                }
+
+                var model = dto.ToModel();
+                await _properties.InsertOneAsync(model);
+
+                return ServiceLogResponseWrapper<PropertyDto>.Ok(model.ToDto(), "Propiedad creada exitosamente", 201);
+            }
+            catch (Exception ex)
+            {
+                return ServiceLogResponseWrapper<PropertyDto>.Fail(
+                    $"Error interno al crear la propiedad: {ex.Message}",
+                    statusCode: 500
+                );
+            }
         }
 
         // ===========================================================
-        // Actualizar propiedad
+        // UPDATE
         // ===========================================================
-        public async Task<ValidationResult> UpdateAsync(string Id, PropertyDto property)
+        public async Task<ServiceLogResponseWrapper<PropertyDto>> UpdateAsync(string id, PropertyDto property)
         {
-            var result = await _validator.ValidateAsync(property);
-            if (!result.IsValid) return result;
+            try
+            {
+                var validation = await _validator.ValidateAsync(property);
+                if (!validation.IsValid)
+                {
+                    return ServiceLogResponseWrapper<PropertyDto>.Fail(
+                        "Errores de validación",
+                        validation.Errors.Select(e => e.ErrorMessage)
+                    );
+                }
 
-            var model = property.ToModel();
-            var updateResult = await _properties.ReplaceOneAsync(p => p.Id == Id, model);
-            if (updateResult.MatchedCount == 0)
-                result.Errors.Add(new ValidationFailure("Id", "Propiedad no encontrada"));
+                var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+                if (existing == null)
+                    return ServiceLogResponseWrapper<PropertyDto>.Fail("Propiedad no encontrada", statusCode: 404);
 
-            return result;
+                // Actualizar solo campos editables
+                existing.Name = property.Name;
+                existing.Address = property.Address;
+                existing.Price = property.Price;
+                existing.CodeInternal = property.CodeInternal;
+                existing.Year = property.Year;
+                existing.IdOwner = property.IdOwner;
+
+                var result = await _properties.ReplaceOneAsync(p => p.Id == id, existing);
+                if (result.MatchedCount == 0)
+                    return ServiceLogResponseWrapper<PropertyDto>.Fail("No se encontró la propiedad para actualizar", statusCode: 404);
+
+                return ServiceLogResponseWrapper<PropertyDto>.Ok(existing.ToDto(), "Propiedad actualizada correctamente");
+            }
+            catch (Exception ex)
+            {
+                return ServiceLogResponseWrapper<PropertyDto>.Fail(
+                    $"Error interno al actualizar la propiedad: {ex.Message}",
+                    statusCode: 500
+                );
+            }
         }
 
         // ===========================================================
-        // Eliminar propiedad
+        // PATCH (actualización parcial)
         // ===========================================================
-        public async Task<bool> DeleteAsync(string Id)
+        public async Task<ServiceLogResponseWrapper<PropertyDto>> PatchAsync(string id, PropertyDto dto)
         {
-            var result = await _properties.DeleteOneAsync(p => p.Id == Id);
-            return result.DeletedCount > 0;
+            // En este caso reutilizamos UpdateAsync, ya que el frontend envía objeto plano
+            return await UpdateAsync(id, dto);
         }
 
         // ===========================================================
-        // Obtener con filtros, paginación y caché
+        // DELETE
+        // ===========================================================
+        public async Task<ServiceLogResponseWrapper<bool>> DeleteAsync(string id)
+        {
+            try
+            {
+                var result = await _properties.DeleteOneAsync(p => p.Id == id);
+
+                if (result.DeletedCount == 0)
+                    return ServiceLogResponseWrapper<bool>.Fail("Propiedad no encontrada", statusCode: 404);
+
+                return ServiceLogResponseWrapper<bool>.Ok(true, "Propiedad eliminada correctamente");
+            }
+            catch (Exception ex)
+            {
+                return ServiceLogResponseWrapper<bool>.Fail(
+                    $"Error interno al eliminar la propiedad: {ex.Message}",
+                    statusCode: 500
+                );
+            }
+        }
+
+        // ===========================================================
+        // CACHED GET (filtros + paginación)
         // ===========================================================
         public async Task<object> GetCachedAsync(
             string? name, string? address, string? idOwner,
@@ -107,7 +176,6 @@ namespace RealEstate.API.Modules.Property.Service
 
             var (data, totalItems) = await GetAllWithMetaAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
 
-            // Mapea _id de Mongo a IdProperty solo para la respuesta
             var result = new
             {
                 data = data.Select(p => new
@@ -122,21 +190,21 @@ namespace RealEstate.API.Modules.Property.Service
                 }).ToList(),
                 meta = new
                 {
-                    page = page,
-                    limit = limit,
+                    page,
+                    limit,
                     total = totalItems,
                     last_page = (int)Math.Ceiling((double)totalItems / limit)
                 }
             };
-    
+
             _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
             return result;
         }
 
         // ===========================================================
-        // Obtener lista con metadatos
+        // LISTADO CON METADATOS
         // ===========================================================
-        public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(
+        private async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(
             string? name, string? address, string? idOwner,
             long? minPrice, long? maxPrice,
             int page = 1, int limit = 6)
@@ -169,9 +237,7 @@ namespace RealEstate.API.Modules.Property.Service
                 .Limit(limit)
                 .ToListAsync();
 
-            var dataDto = PropertyMapper.ToDtoList(data);
-
-            return (dataDto, totalItems);
+            return (PropertyMapper.ToDtoList(data), totalItems);
         }
     }
 }

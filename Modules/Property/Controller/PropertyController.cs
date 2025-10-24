@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.Property.Dto;
@@ -18,7 +17,7 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // GET: api/property  (con filtros, paginación y caché)
+        // GET: api/property (con filtros, paginación y caché)
         // ===========================================================
         [HttpGet]
         public async Task<IActionResult> GetAll(
@@ -40,10 +39,12 @@ namespace RealEstate.API.Modules.Property.Controller
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var property = await _service.GetByIdAsync(id);
-            if (property == null) return NotFound(new { message = "Propiedad no encontrada" });
+            var result = await _service.GetByIdAsync(id);
 
-            return Ok(property);
+            if (result == null)
+                return NotFound(new { message = "Propiedad no encontrada" });
+
+            return Ok(result);
         }
 
         // ===========================================================
@@ -53,8 +54,15 @@ namespace RealEstate.API.Modules.Property.Controller
         // [Authorize]
         public async Task<IActionResult> Create([FromBody] PropertyDto property)
         {
-            var id = await _service.CreateAsync(property);
-            return CreatedAtAction(nameof(GetById), new { id }, new { Id = id });
+            if (property == null)
+                return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
+
+            var result = await _service.CreateAsync(property);
+
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new { message = result.Message, errors = result.Errors });
+
+            return CreatedAtAction(nameof(GetById), new { id = result.Data?.IdProperty }, result.Data);
         }
 
         // ===========================================================
@@ -64,17 +72,15 @@ namespace RealEstate.API.Modules.Property.Controller
         [Authorize]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto property)
         {
+            if (property == null)
+                return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
+
             var result = await _service.UpdateAsync(id, property);
-            if (!result.IsValid)
-            {
-                if (result.Errors.Any(e => e.PropertyName == "Id"))
-                    return NotFound(new { message = "Propiedad no encontrada" });
 
-                return BadRequest(result.Errors.Select(e => e.ErrorMessage));
-            }
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new { message = result.Message, errors = result.Errors });
 
-            var updated = await _service.GetByIdAsync(id);
-            return Ok(updated);
+            return Ok(result.Data);
         }
 
         // ===========================================================
@@ -87,30 +93,13 @@ namespace RealEstate.API.Modules.Property.Controller
             if (dto == null)
                 return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
 
-            // 🔹 Verificar si existe la propiedad
-            var existingDto = await _service.GetByIdAsync(id);
-            if (existingDto == null)
-                return NotFound(new { message = "Propiedad no encontrada" });
+            var result = await _service.PatchAsync(id, dto);
 
-            // 🔹 Actualizar la entidad
-            var updateResult = await _service.UpdateAsync(id, dto);
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new { message = result.Message, errors = result.Errors });
 
-            // Si el servicio devuelve un objeto de validación
-            if (!updateResult.IsValid)
-            {
-                return BadRequest(new
-                {
-                    message = "Errores de validación",
-                    errors = updateResult.Errors.Select(e => e.ErrorMessage)
-                });
-            }
-
-            // 🔹 Obtener la versión actualizada
-            var updated = await _service.GetByIdAsync(id);
-            return Ok(updated);
+            return Ok(result.Data);
         }
-
-
 
         // ===========================================================
         // DELETE: api/property/{id}
@@ -119,10 +108,12 @@ namespace RealEstate.API.Modules.Property.Controller
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
-            var deleted = await _service.DeleteAsync(id);
-            if (!deleted) return NotFound(new { message = "Propiedad no encontrada" });
+            var result = await _service.DeleteAsync(id);
 
-            return Ok(new { message = "Propiedad eliminada correctamente" });
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new { message = result.Message, errors = result.Errors });
+
+            return Ok(new { message = result.Message });
         }
     }
 }
