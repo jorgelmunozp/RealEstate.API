@@ -24,12 +24,18 @@ namespace RealEstate.API.Modules.Property.Service
             _cache = cache;
         }
 
+        // ===========================================================
+        // GET BY ID
+        // ===========================================================
         public async Task<PropertyDto?> GetByIdAsync(string id)
         {
             var property = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
-            return property != null ? PropertyMapper.ToDto(property) : null;
+            return property != null ? property.ToDto() : null;
         }
 
+        // ===========================================================
+        // CREATE
+        // ===========================================================
         public async Task<ServiceLogResponseWrapper<PropertyDto>> CreateAsync(PropertyDto dto)
         {
             var validation = await _validator.ValidateAsync(dto);
@@ -38,9 +44,13 @@ namespace RealEstate.API.Modules.Property.Service
 
             var model = dto.ToModel();
             await _properties.InsertOneAsync(model);
+
             return ServiceLogResponseWrapper<PropertyDto>.Ok(model.ToDto(), "Propiedad creada exitosamente", 201);
         }
 
+        // ===========================================================
+        // UPDATE
+        // ===========================================================
         public async Task<ServiceLogResponseWrapper<PropertyDto>> UpdateAsync(string id, PropertyDto dto)
         {
             var validation = await _validator.ValidateAsync(dto);
@@ -51,6 +61,7 @@ namespace RealEstate.API.Modules.Property.Service
             if (existing == null)
                 return ServiceLogResponseWrapper<PropertyDto>.Fail("Propiedad no encontrada", statusCode: 404);
 
+            // Actualiza campos editables
             existing.Name = dto.Name;
             existing.Address = dto.Address;
             existing.Price = dto.Price;
@@ -59,10 +70,13 @@ namespace RealEstate.API.Modules.Property.Service
             existing.IdOwner = dto.IdOwner;
 
             await _properties.ReplaceOneAsync(p => p.Id == id, existing);
+
             return ServiceLogResponseWrapper<PropertyDto>.Ok(existing.ToDto(), "Propiedad actualizada correctamente");
         }
 
-        // PATCH parcial real
+        // ===========================================================
+        // PATCH (actualización parcial real)
+        // ===========================================================
         public async Task<ServiceLogResponseWrapper<PropertyDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
             var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
@@ -90,6 +104,9 @@ namespace RealEstate.API.Modules.Property.Service
             return ServiceLogResponseWrapper<PropertyDto>.Ok(updated.ToDto(), "Propiedad actualizada parcialmente");
         }
 
+        // ===========================================================
+        // DELETE
+        // ===========================================================
         public async Task<ServiceLogResponseWrapper<bool>> DeleteAsync(string id)
         {
             var result = await _properties.DeleteOneAsync(p => p.Id == id);
@@ -99,25 +116,50 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // GET con filtros y caché (sin tocar)
+        // GET con filtros y caché
         // ===========================================================
         public async Task<object> GetCachedAsync(string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page = 1, int limit = 6)
         {
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
+
             var cacheKey = $"{name}-{address}-{idOwner}-{minPrice}-{maxPrice}-{page}-{limit}";
             if (_cache.TryGetValue(cacheKey, out object cached)) return cached;
 
             var (data, totalItems) = await GetAllWithMetaAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
-            var result = new { data = data.Select(p => new { p.IdProperty, p.Name, p.Address, p.Price, p.Year, p.CodeInternal, p.IdOwner }).ToList(), meta = new { page, limit, total = totalItems, last_page = (int)Math.Ceiling((double)totalItems / limit) } };
+            var result = new
+            {
+                data = data.Select(p => new
+                {
+                    p.IdProperty,
+                    p.Name,
+                    p.Address,
+                    p.Price,
+                    p.Year,
+                    p.CodeInternal,
+                    p.IdOwner
+                }).ToList(),
+                meta = new
+                {
+                    page,
+                    limit,
+                    total = totalItems,
+                    last_page = (int)Math.Ceiling((double)totalItems / limit)
+                }
+            };
+
             _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
             return result;
         }
 
+        // ===========================================================
+        // Helper con metadatos
+        // ===========================================================
         private async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page = 1, int limit = 6)
         {
             var filterBuilder = Builders<PropertyModel>.Filter;
             var filters = new List<FilterDefinition<PropertyModel>>();
+
             if (!string.IsNullOrEmpty(name)) filters.Add(filterBuilder.Regex(p => p.Name, new BsonRegularExpression(name, "i")));
             if (!string.IsNullOrEmpty(address)) filters.Add(filterBuilder.Regex(p => p.Address, new BsonRegularExpression(address, "i")));
             if (!string.IsNullOrEmpty(idOwner)) filters.Add(filterBuilder.Eq(p => p.IdOwner, idOwner));
@@ -125,8 +167,10 @@ namespace RealEstate.API.Modules.Property.Service
             if (maxPrice.HasValue) filters.Add(filterBuilder.Lte(p => p.Price, maxPrice.Value));
 
             var filter = filters.Count > 0 ? filterBuilder.And(filters) : FilterDefinition<PropertyModel>.Empty;
+
             var totalItems = await _properties.CountDocumentsAsync(filter);
             var data = await _properties.Find(filter).Skip((page - 1) * limit).Limit(limit).ToListAsync();
+
             return (PropertyMapper.ToDtoList(data), totalItems);
         }
     }

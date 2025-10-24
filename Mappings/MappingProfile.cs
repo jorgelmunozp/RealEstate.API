@@ -13,7 +13,7 @@ namespace RealEstate.API.Mappings
     {
         public MappingProfile()
         {
-            CreateMap<PropertyModel, PropertyDto>();
+            CreateMap<PropertyDto, PropertyDto>();
             CreateMap<OwnerModel, OwnerDto>();
             CreateMap<PropertyImageModel, PropertyImageDto>();
             CreateMap<PropertyTraceModel, PropertyTraceDto>();
