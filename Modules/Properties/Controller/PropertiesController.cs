@@ -19,7 +19,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 GET: api/Property
+        // GET: api/Property
         // ===========================================================
         [HttpGet]
         public async Task<IActionResult> GetAll(
@@ -35,7 +35,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 GET: api/Property/{id}
+        // GET: api/Property/{id}
         // ===========================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
@@ -48,7 +48,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 POST: api/Property
+        // POST: api/Property
         // ===========================================================
         [HttpPost]
         [Authorize]
@@ -65,7 +65,7 @@ namespace RealEstate.API.Modules.Properties.Controller
 
 
         // ===========================================================
-        // 🔹 PUT: api/Property/{id}
+        // PUT: api/Property/{id}
         // ===========================================================
         [HttpPut("{id}")]
         [Authorize]
@@ -82,7 +82,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 PATCH: api/Property/{id}
+        // PATCH: api/Property/{id}
         // ===========================================================
         [HttpPatch("{id}")]
         [Authorize]
@@ -114,7 +114,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 DELETE: api/Property/{id}
+        // DELETE: api/Property/{id}
         // ===========================================================
         [Authorize(Roles = "admin")]
         [HttpDelete("{id}")]
@@ -128,7 +128,7 @@ namespace RealEstate.API.Modules.Properties.Controller
         }
 
         // ===========================================================
-        // 🔹 Mapeos DTO → Modelo
+        // Mapeos DTO → Modelo
         // ===========================================================
         private PropertyModel MapDtoToProperty(PropertyDto dto)
         {

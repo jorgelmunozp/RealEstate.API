@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
@@ -22,19 +24,67 @@ public class LoggingMiddleware
         var method = request.Method;
         var url = request.Path;
 
+        // Detectar Id de la propiedad o id genérico
+        var propertyId = context.Request.RouteValues.ContainsKey("propertyId")
+            ? context.Request.RouteValues["propertyId"]?.ToString()
+            : context.Request.RouteValues.ContainsKey("id")
+                ? context.Request.RouteValues["id"]?.ToString()
+                : null;
+
+        // Leer cuerpo del request (solo POST, PUT, PATCH)
+        string requestBody = string.Empty;
+        if (method is "POST" or "PUT" or "PATCH")
+        {
+            context.Request.EnableBuffering();
+            using var reader = new StreamReader(
+                context.Request.Body,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 1024,
+                leaveOpen: true
+            );
+            requestBody = await reader.ReadToEndAsync();
+            context.Request.Body.Position = 0;
+        }
+
+        // Capturar cuerpo de la respuesta
+        var originalBodyStream = context.Response.Body;
+        using var responseBodyStream = new MemoryStream();
+        context.Response.Body = responseBodyStream;
+
         // ----- Antes de procesar -----
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.Write("[HALL] ");
         Console.ForegroundColor = ConsoleColor.Green;
         Console.Write("Request: ");
         Console.ResetColor();
-        Console.WriteLine($"[{method}] {url}");
+        Console.WriteLine($"[{method}] {url} (PropertyId: {propertyId ?? "N/A"})");
 
-        _logger.LogInformation("HALL Request: [{Method}] {Url}", method, url);
+        if (!string.IsNullOrWhiteSpace(requestBody))
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"Body: {requestBody}");
+            Console.ResetColor();
+        }
 
-        await _next(context);
+        _logger.LogInformation(
+            "HALL Request: [{Method}] {Url} (PropertyId: {PropertyId}) Body: {Body}",
+            method, url, propertyId, string.IsNullOrWhiteSpace(requestBody) ? "No body" : requestBody
+        );
+
+        await _next(context); // Ejecuta el resto del pipeline
 
         stopwatch.Stop();
+
+        // Leer respuesta
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var responseBody = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+
+        // Restaurar stream original
+        await responseBodyStream.CopyToAsync(originalBodyStream);
+        context.Response.Body = originalBodyStream;
+
         var statusCode = context.Response.StatusCode;
         var responseTime = stopwatch.ElapsedMilliseconds;
 
@@ -44,14 +94,23 @@ public class LoggingMiddleware
         Console.ForegroundColor = ConsoleColor.Magenta;
         Console.Write("Response: ");
         Console.ResetColor();
-        Console.WriteLine($"[{method}] {url} => {statusCode} ({responseTime}ms)");
+        Console.WriteLine($"[{method}] {url} => {statusCode} ({responseTime}ms) (PropertyId: {propertyId ?? "N/A"})");
+
+        if (!string.IsNullOrWhiteSpace(responseBody))
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"Response Body: {responseBody}");
+            Console.ResetColor();
+        }
 
         _logger.LogInformation(
-            "HALL Response: [{Method}] {Url} => {StatusCode} ({ResponseTime}ms)",
+            "HALL Response: [{Method}] {Url} => {StatusCode} ({ResponseTime}ms) (PropertyId: {PropertyId}) Body: {Body}",
             method,
             url,
             statusCode,
-            responseTime
+            responseTime,
+            propertyId,
+            string.IsNullOrWhiteSpace(responseBody) ? "No body" : responseBody
         );
     }
 }

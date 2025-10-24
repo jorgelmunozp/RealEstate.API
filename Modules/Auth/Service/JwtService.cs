@@ -19,7 +19,7 @@ namespace RealEstate.API.Modules.Auth.Service
         {
             if (user == null) throw new ArgumentNullException(nameof(user));
 
-            // 🔹 Obtener clave secreta, lanzar excepción si no está configurada
+            // Obtener clave secreta, lanzar excepción si no está configurada
             var secret = _config["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey no está configurada");
             var key = Encoding.UTF8.GetBytes(secret);
 

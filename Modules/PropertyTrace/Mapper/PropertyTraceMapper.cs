@@ -6,7 +6,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
 {
     public static class PropertyTraceMapper
     {
-        // 🔹 De Model → DTO
+        // De Model → DTO
         public static PropertyTraceDto ToDto(this PropertyTraceModel model) => new()
         {
             DateSale = model.DateSale,
@@ -16,7 +16,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
             IdProperty = model.IdProperty
         };
 
-        // 🔹 Convierte una lista de modelos en una lista de DTOs
+        // Convierte una lista de modelos en una lista de DTOs
         public static List<PropertyTraceDto> ToDtoList(IEnumerable<PropertyTraceModel> models)
         {
             if (models == null || !models.Any())
@@ -25,7 +25,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
             return models.Select(m => ToDto(m)).ToList();
         }
 
-        // 🔹 De DTO → Model
+        // De DTO → Model
         public static PropertyTraceModel ToModel(this PropertyTraceDto dto) => new()
         {
             Id = ObjectId.GenerateNewId().ToString(),
@@ -36,7 +36,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Mapper
             IdProperty = dto.IdProperty
         };
 
-        // 🔹 Convierte una lista de DTOs en una lista de modelos
+        // Convierte una lista de DTOs en una lista de modelos
         public static List<PropertyTraceModel> ToModelList(IEnumerable<PropertyTraceDto> dtos)
         {
             if (dtos == null || !dtos.Any())

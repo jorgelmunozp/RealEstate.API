@@ -36,7 +36,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener todas las propiedades (simple)
+        // Obtener todas las propiedades (simple)
         // ===========================================================
         public async Task<List<PropertyDto>> GetAllAsync()
         {
@@ -45,7 +45,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener propiedad por Id
+        // Obtener propiedad por Id
         // ===========================================================
         public async Task<PropertyDto?> GetByIdAsync(string id)
         {
@@ -53,7 +53,7 @@ namespace RealEstate.API.Modules.Property.Service
             return property != null ? PropertyMapper.ToDto(property) : null;
         }
         // ===========================================================
-        // 🔹 Crear nueva propiedad
+        // Crear nueva propiedad
         // ===========================================================
         public async Task<string> CreateAsync(PropertyDto property)
         {
@@ -66,7 +66,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Actualizar propiedad
+        // Actualizar propiedad
         // ===========================================================
         public async Task<ValidationResult> UpdateAsync(string Id, PropertyDto property)
         {
@@ -82,7 +82,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Eliminar propiedad
+        // Eliminar propiedad
         // ===========================================================
         public async Task<bool> DeleteAsync(string Id)
         {
@@ -91,7 +91,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener con filtros, paginación y caché
+        // Obtener con filtros, paginación y caché
         // ===========================================================
         public async Task<object> GetCachedAsync(
             string? name, string? address, string? idOwner,
@@ -134,7 +134,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener lista con metadatos
+        // Obtener lista con metadatos
         // ===========================================================
         public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(
             string? name, string? address, string? idOwner,

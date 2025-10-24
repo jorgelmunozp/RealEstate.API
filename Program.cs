@@ -53,7 +53,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
 // ==========================================
-// 🔹 CONFIGURACIÓN DE MONGODB
+// CONFIGURACIÓN DE MONGODB
 // ==========================================
 var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION") 
                             ?? "mongodb://localhost:27017";
@@ -86,7 +86,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DictionaryKeyPolicy = null;
     });
 // ==========================================
-// 🔹 CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
+// CONFIGURACIÓN JWT DESDE VARIABLES DE ENTORNO
 // ==========================================
 var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET") 
                 ?? throw new InvalidOperationException("La variable JWT_SECRET no está definida");
@@ -101,7 +101,7 @@ builder.Configuration["JwtSettings:Audience"] = audience;
 builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
 
 // ==========================================
-// 🔹 CONTROLADORES, VALIDACIONES Y FILTRO GLOBAL
+// CONTROLADORES, VALIDACIONES Y FILTRO GLOBAL
 // ==========================================
 builder.Services.AddControllers(options =>
 {
@@ -138,12 +138,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 // ==========================================
-// 🔹 CACHÉ EN MEMORIA
+// CACHÉ EN MEMORIA
 // ==========================================
 builder.Services.AddMemoryCache();
 
 // ==========================================
-// 🔹 MICROSERVICIOS
+// MICROSERVICIOS
 // ==========================================
 
 // Auth
@@ -174,7 +174,7 @@ builder.Services.AddScoped<PropertyTraceService>();
 // JWT Service
 builder.Services.AddSingleton<JwtService>();
 // ==========================================
-// 🔹 CORS GLOBAL
+// CORS GLOBAL
 // ==========================================
 builder.Services.AddCors(options =>
 {
@@ -187,7 +187,7 @@ builder.Services.AddCors(options =>
 });
 
 // ==========================================
-// 🔹 CONFIGURACIÓN JWT PARA AUTENTICACIÓN
+// CONFIGURACIÓN JWT PARA AUTENTICACIÓN
 // ==========================================
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 builder.Services.AddAuthentication(options =>
@@ -217,12 +217,12 @@ builder.Services.AddAuthorization();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 // ==========================================
-// 🔹 CONSTRUCCIÓN DE LA APP
+// CONSTRUCCIÓN DE LA APP
 // ==========================================
 var app = builder.Build();
 
 // ==========================================
-// 🔹 MIDDLEWARE
+// MIDDLEWARE
 // ==========================================
 // Middleware de logging HALL - Backend Logs
 app.UseMiddleware<LoggingMiddleware>();
@@ -236,11 +236,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // ==========================================
-// 🔹 CONTROLADORES
+// CONTROLADORES
 // ==========================================
 app.MapControllers();
 
 // ==========================================
-// 🔹 EJECUCIÓN
+// EJECUCIÓN
 // ==========================================
 app.Run();

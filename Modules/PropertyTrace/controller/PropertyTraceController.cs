@@ -32,7 +32,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
             return Ok(new List<PropertyTraceDto> { trace }); // Envolver en lista
         }
 
-        // 🔹 Recibe lista de DTOs
+        // Recibe lista de DTOs
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] IEnumerable<PropertyTraceDto> traces)
         {

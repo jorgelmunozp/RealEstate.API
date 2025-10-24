@@ -18,7 +18,7 @@ namespace RealEstate.API.Modules.Property.Mapper
             IdOwner = model.IdOwner
         };
 
-        // 🔹 Convierte una lista de modelos en una lista de DTOs
+        // Convierte una lista de modelos en una lista de DTOs
         public static List<PropertyDto> ToDtoList(IEnumerable<PropertyModel> models)
         {
             if (models == null || !models.Any())
@@ -39,7 +39,7 @@ namespace RealEstate.API.Modules.Property.Mapper
             IdOwner = dto.IdOwner
         };
 
-        // 🔹 Convierte una lista de DTOs en una lista de modelos
+        // Convierte una lista de DTOs en una lista de modelos
         public static List<PropertyModel> ToModelList(IEnumerable<PropertyDto> dtos)
         {
             if (dtos == null || !dtos.Any())

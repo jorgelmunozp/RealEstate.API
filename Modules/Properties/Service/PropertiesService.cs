@@ -35,7 +35,7 @@ namespace RealEstate.API.Modules.Properties.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener con filtros y caché
+        // Obtener con filtros y caché
         // ===========================================================
         public async Task<object> GetCachedAsync(
             string? name, string? address, long? minPrice, long? maxPrice,
@@ -64,7 +64,7 @@ namespace RealEstate.API.Modules.Properties.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener lista con metadatos
+        // Obtener lista con metadatos
         // ===========================================================
         public async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(
             string? name, string? address, long? minPrice, long? maxPrice,
@@ -100,7 +100,7 @@ namespace RealEstate.API.Modules.Properties.Service
         }
 
         // ===========================================================
-        // 🔹 Obtener por ID
+        // Obtener por ID
         // ===========================================================
         public async Task<PropertyDto?> GetByIdAsync(string Id)
         {
@@ -112,28 +112,28 @@ namespace RealEstate.API.Modules.Properties.Service
         }
 
         // ===========================================================
-        // 🔹 Actualizar (con posible nueva imagen)
+        // Actualizar (con posible nueva imagen)
         // ===========================================================
         public async Task<PropertyModel?> UpdateAsync(string Id, PropertyModel updatedProperty)
         {
-            // 🔹 Obtener propiedad existente
+            // Obtener propiedad existente
             var existing = await _properties.Find(p => p.Id == Id).FirstOrDefaultAsync();
             if (existing == null)
                 return null;
 
-            // 🔹 Mantener IDs correctos
+            // Mantener IDs correctos
             updatedProperty.Id = existing.Id;
             if (string.IsNullOrEmpty(updatedProperty.Id))
                 updatedProperty.Id = existing.Id;
 
-            // 🔹 Nota: Owner.Photo se maneja en el Controller
+            // Nota: Owner.Photo se maneja en el Controller
             await _properties.ReplaceOneAsync(p => p.Id == Id, updatedProperty);
             return updatedProperty;
         }
 
 
         // ===========================================================
-        // 🔹 Guardar imagen físicamente
+        // Guardar imagen físicamente
         // ===========================================================
         // public async Task<string> SaveImageAsync(IFormFile file)
         // {
@@ -157,32 +157,32 @@ namespace RealEstate.API.Modules.Properties.Service
             if (string.IsNullOrEmpty(Image))
                 throw new ArgumentException("La imagen Base64 no puede estar vacía.");
 
-            // 🔹 Separar encabezado (data:image/png;base64,...) si existe
+            // Separar encabezado (data:image/png;base64,...) si existe
             var base64Data = Image.Contains(",") 
                 ? Image.Substring(Image.IndexOf(',') + 1) 
                 : Image;
 
-            // 🔹 Convertir Base64 a bytes
+            // Convertir Base64 a bytes
             byte[] imageBytes = Convert.FromBase64String(base64Data);
 
-            // 🔹 Directorio de subida
+            // Directorio de subida
             var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
             if (!Directory.Exists(uploadsDir))
                 Directory.CreateDirectory(uploadsDir);
 
-            // 🔹 Nombre único de archivo con extensión PNG
+            // Nombre único de archivo con extensión PNG
             var fileName = $"{Guid.NewGuid()}.png";
             var fullPath = Path.Combine(uploadsDir, fileName);
 
-            // 🔹 Guardar archivo
+            // Guardar archivo
             await File.WriteAllBytesAsync(fullPath, imageBytes);
 
-            // 🔹 Retornar ruta relativa
+            // Retornar ruta relativa
             return $"/uploads/{fileName}";
         }
 
         // ===========================================================
-        // 🔹 Eliminar propiedad
+        // Eliminar propiedad
         // ===========================================================
         public async Task<bool> DeleteAsync(string Id)
         {
@@ -194,7 +194,7 @@ namespace RealEstate.API.Modules.Properties.Service
         }
 
         // ===========================================================
-        // 🔹 Mapeos DTO
+        // Mapeos DTO
         // ===========================================================
         private static PropertyDto MapToDto(PropertyModel property)
         {

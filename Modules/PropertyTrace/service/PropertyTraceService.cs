@@ -45,7 +45,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return trace != null ? PropertyTraceMapper.ToDto(trace) : null;
         }
 
-        // 🔹 Crea múltiples registros a la vez
+        // Crea múltiples registros a la vez
         public async Task<List<string>> CreateAsync(IEnumerable<PropertyTraceDto> traces)
         {
             var ids = new List<string>();

@@ -18,7 +18,7 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // 🔹 GET: api/property  (con filtros, paginación y caché)
+        // GET: api/property  (con filtros, paginación y caché)
         // ===========================================================
         [HttpGet]
         public async Task<IActionResult> GetAll(
@@ -35,7 +35,7 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // 🔹 GET: api/property/{id}
+        // GET: api/property/{id}
         // ===========================================================
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
@@ -47,7 +47,7 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // 🔹 POST: api/property
+        // POST: api/property
         // ===========================================================
         [HttpPost]
         // [Authorize]
@@ -58,7 +58,7 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // 🔹 PUT: api/property/{id}
+        // PUT: api/property/{id}
         // ===========================================================
         [HttpPut("{id}")]
         [Authorize]
@@ -78,38 +78,42 @@ namespace RealEstate.API.Modules.Property.Controller
         }
 
         // ===========================================================
-        // 🔹 PATCH: api/property/{id}
+        // PATCH: api/property/{id}
         // ===========================================================
         [HttpPatch("{id}")]
-        [Authorize]
-        public async Task<IActionResult> Patch(string id, [FromBody] JsonPatchDocument<PropertyDto> patchDoc)
+        // [Authorize]
+        public async Task<IActionResult> Patch(string id, [FromBody] PropertyDto dto)
         {
-            if (patchDoc == null)
-                return BadRequest(new { message = "Documento PATCH inválido" });
+            if (dto == null)
+                return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
 
+            // 🔹 Verificar si existe la propiedad
             var existingDto = await _service.GetByIdAsync(id);
             if (existingDto == null)
                 return NotFound(new { message = "Propiedad no encontrada" });
 
-            patchDoc.ApplyTo(existingDto, e =>
-            {
-                ModelState.AddModelError(e.AffectedObject?.ToString() ?? string.Empty, e.ErrorMessage);
-            });
+            // 🔹 Actualizar la entidad
+            var updateResult = await _service.UpdateAsync(id, dto);
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var updateResult = await _service.UpdateAsync(id, existingDto);
+            // Si el servicio devuelve un objeto de validación
             if (!updateResult.IsValid)
-                return BadRequest(updateResult.Errors.Select(e => e.ErrorMessage));
+            {
+                return BadRequest(new
+                {
+                    message = "Errores de validación",
+                    errors = updateResult.Errors.Select(e => e.ErrorMessage)
+                });
+            }
 
+            // 🔹 Obtener la versión actualizada
             var updated = await _service.GetByIdAsync(id);
             return Ok(updated);
         }
 
 
+
         // ===========================================================
-        // 🔹 DELETE: api/property/{id}
+        // DELETE: api/property/{id}
         // ===========================================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "admin")]
