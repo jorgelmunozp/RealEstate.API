@@ -11,8 +11,10 @@ namespace RealEstate.API.Middleware
         {
             if (context.Exception is ValidationException validationException)
             {
+                string ToCamel(string s) => string.IsNullOrEmpty(s) ? s : char.ToLowerInvariant(s[0]) + s.Substring(1);
+
                 var errors = validationException.Errors
-                    .GroupBy(e => e.PropertyName)
+                    .GroupBy(e => ToCamel(e.PropertyName))
                     .ToDictionary(
                         g => g.Key,
                         g => g.Select(e => e.ErrorMessage).ToArray()
@@ -29,3 +31,4 @@ namespace RealEstate.API.Middleware
         }
     }
 }
+

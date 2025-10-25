@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using DotNetEnv;
 using MongoDB.Driver;
 using FluentValidation;
@@ -47,15 +47,15 @@ builder.Configuration.AddEnvironmentVariables();
 var config = builder.Configuration;
 
 // ==========================================
-// 🔹 CONFIGURACIÓN DE MONGODB
+// ðŸ”¹ CONFIGURACIÃ“N DE MONGODB
 // ==========================================
 var mongoConnectionString = config["MONGO_CONNECTION"] ?? "mongodb://localhost:27017";
 var mongoDbName = config["MONGO_DATABASE"] ?? "RealEstate";
 
 if (string.IsNullOrWhiteSpace(mongoConnectionString))
-    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacía.");
+    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacÃ­a.");
 if (string.IsNullOrWhiteSpace(mongoDbName))
-    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacía.");
+    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacÃ­a.");
 
 Console.WriteLine($"MongoDB Connection: {mongoConnectionString}");
 Console.WriteLine($"MongoDB Database: {mongoDbName}");
@@ -64,22 +64,23 @@ builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName));
 
 // ==========================================
-// 🔹 JSON SIN camelCase
+// ðŸ”¹ JSON SIN camelCase
 // ==========================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
-        o.JsonSerializerOptions.PropertyNamingPolicy = null;
-        o.JsonSerializerOptions.DictionaryKeyPolicy = null;
+        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
 // ==========================================
-// 🔹 JWT DESDE VARIABLES DE ENTORNO
+// ðŸ”¹ JWT DESDE VARIABLES DE ENTORNO
 // ==========================================
-var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La variable JWT_SECRET no está definida");
+var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La variable JWT_SECRET no estÃ¡ definida");
 var issuer = config["JWT_ISSUER"] ?? "RealEstateAPI";
 var audience = config["JWT_AUDIENCE"] ?? "UsuariosAPI";
-var expiryMinutes = config["JWT_EXPIRY"] ?? "60";
+var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? config["JWT_EXPIRY"] ?? "60";
 
 builder.Configuration["JwtSettings:SecretKey"] = secretKey;
 builder.Configuration["JwtSettings:Issuer"] = issuer;
@@ -87,39 +88,64 @@ builder.Configuration["JwtSettings:Audience"] = audience;
 builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
 
 // ==========================================
-// 🔹 VALIDACIÓN GLOBAL Y FLUENTVALIDATION
+// ðŸ”¹ VALIDACIÃ“N GLOBAL Y FLUENTVALIDATION
 // ==========================================
 builder.Services.AddControllers(o => o.Filters.Add<ValidationExceptionFilter>())
-.AddNewtonsoftJson(o =>
-{
-    o.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-    o.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
-    o.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-});
+    .AddNewtonsoftJson(o =>
+    {
+        o.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver
+        {
+            NamingStrategy = new Newtonsoft.Json.Serialization.CamelCaseNamingStrategy(processDictionaryKeys: true, overrideSpecifiedNames: false)
+        };
+        o.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+        o.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+        o.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+    });
 
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+// Forzar nombres de propiedad en validaciónes a camelCase (afecta claves en ModelState)
+FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expression) =>
+{
+    string? name = member?.Name;
+    if (string.IsNullOrEmpty(name) && expression != null)
+    {
+        var exprStr = expression.ToString();
+        var last = exprStr.Split('.').LastOrDefault();
+        name = last;
+    }
+    return string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
+};
+
 builder.Services.Configure<ApiBehaviorOptions>(o =>
 {
     o.InvalidModelStateResponseFactory = ctx =>
-    {
-        var errors = ctx.ModelState
-            .Where(x => x.Value.Errors.Count > 0)
-            .ToDictionary(k => k.Key, v => v.Value.Errors.Select(e => e.ErrorMessage).ToArray());
+{
+    var errors = ctx.ModelState
+                .Where(x => x.Value != null && x.Value.Errors.Count > 0)
+                .SelectMany(v => v.Value!.Errors)
+        .Select(e => e.ErrorMessage)
+        .ToArray();
 
-        return new BadRequestObjectResult(new { message = "Errores de validación", errors });
-    };
+    var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<object>.Fail(
+        message: "Errores de validación",
+        errors: errors,
+        statusCode: 400
+    );
+
+    return new BadRequestObjectResult(payload);
+};
 });
 
 // ==========================================
-// 🔹 CACHÉ
+// ðŸ”¹ CACHÃ‰
 // ==========================================
 builder.Services.AddMemoryCache();
 
 // ==========================================
-// 🔹 SERVICIOS
+// ðŸ”¹ SERVICIOS
 // ==========================================
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<AuthService>();
@@ -140,9 +166,11 @@ builder.Services.AddScoped<IValidator<PropertyTraceDto>, PropertyTraceDtoValidat
 builder.Services.AddScoped<PropertyTraceService>();
 
 builder.Services.AddSingleton<JwtService>();
+// AutoMapper (si se utiliza MappingProfile)
+builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
 // ==========================================
-// 🔹 CORS
+// ðŸ”¹ CORS
 // ==========================================
 builder.Services.AddCors(o =>
 {
@@ -150,7 +178,7 @@ builder.Services.AddCors(o =>
 });
 
 // ==========================================
-// 🔹 JWT AUTENTICACIÓN
+// ðŸ”¹ JWT AUTENTICACIÃ“N
 // ==========================================
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 builder.Services.AddAuthentication(o =>
@@ -176,7 +204,7 @@ builder.Services.AddAuthentication(o =>
 builder.Services.AddAuthorization();
 
 // ==========================================
-// 🔹 LOGGING
+// ðŸ”¹ LOGGING
 // ==========================================
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(o =>
@@ -186,7 +214,7 @@ builder.Logging.AddSimpleConsole(o =>
 });
 
 // ==========================================
-// 🔹 APP
+// ðŸ”¹ APP
 // ==========================================
 var app = builder.Build();
 app.UseMiddleware<LoggingMiddleware>();
@@ -197,5 +225,42 @@ app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseStatusCodePages(async context =>
+{
+    var res = context.HttpContext.Response;
+    var message = res.StatusCode switch
+    {
+        401 => "No autorizado",
+        403 => "Prohibido",
+        404 => "Recurso no encontrado",
+        405 => "Método no permitido",
+        415 => "Tipo de contenido no soportado",
+        _ => "Error"
+    };
+
+    var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<string>.Fail(
+        message: message,
+        statusCode: res.StatusCode
+    );
+
+    res.ContentType = "application/json";
+    var json = System.Text.Json.JsonSerializer.Serialize(
+        payload,
+        new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            WriteIndented = true
+        }
+    );
+    await res.WriteAsync(json);
+});
 app.MapControllers();
 app.Run();
+
+
+
+
+
+
+

@@ -46,8 +46,6 @@ D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\testhost.dll
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\testhost.exe
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\appsettings.Development.json
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\appsettings.json
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\propertyCreate.json
-D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\propertyUpdate.json
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.staticwebassets.endpoints.json
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.exe
 D:\Apps\Real estate app\backend\RealEstate.API\bin\Debug\net9.0\RealEstate.API.deps.json

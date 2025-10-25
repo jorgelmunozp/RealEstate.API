@@ -5,10 +5,10 @@ namespace RealEstate.API.Modules.PropertyImage.Model
 {
     public class PropertyImageModel
     {
-        // MongoDB _id (interno)
+        // 🔹 MongoDB _id (interno)
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } = string.Empty;
+        public string IdPropertyImage { get; set; } = string.Empty;
 
         [BsonElement("File")]
         public string File { get; set; } = string.Empty;
@@ -17,6 +17,6 @@ namespace RealEstate.API.Modules.PropertyImage.Model
         public bool Enabled { get; set; } = true;
 
         [BsonElement("IdProperty")]
-        public string IdProperty { get; set; } = string.Empty;        
+        public string IdProperty { get; set; } = string.Empty;
     }
 }

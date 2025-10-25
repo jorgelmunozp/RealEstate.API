@@ -27,11 +27,11 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             return Ok(result);
         }
 
-        // 🔹 GET: api/propertyimage/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(string id)
+        // 🔹 GET: api/propertyimage/{idPropertyImage}
+        [HttpGet("{idPropertyImage}")]
+        public async Task<IActionResult> GetById(string idPropertyImage)
         {
-            var image = await _service.GetByIdAsync(id);
+            var image = await _service.GetByIdAsync(idPropertyImage);
             if (image == null)
                 return NotFound(new { Message = "Imagen no encontrada" });
 
@@ -54,49 +54,48 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
         public async Task<IActionResult> Create([FromBody] PropertyImageDto image)
         {
             var id = await _service.CreateAsync(image);
-            return CreatedAtAction(nameof(GetById), new { id }, new { Id = id });
+            return CreatedAtAction(nameof(GetById), new { idPropertyImage = id }, new { IdPropertyImage = id });
         }
 
-        // 🔹 PUT: api/propertyimage/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] PropertyImageDto image)
+        // 🔹 PUT: api/propertyimage/{idPropertyImage}
+        [HttpPut("{idPropertyImage}")]
+        public async Task<IActionResult> Update(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
-            var result = await _service.UpdateAsync(id, image);
+            var result = await _service.UpdateAsync(idPropertyImage, image);
             if (!result.IsValid)
             {
-                if (result.Errors.Any(e => e.PropertyName == "Id"))
+                if (result.Errors.Any(e => e.PropertyName == "IdPropertyImage"))
                     return NotFound(new { Message = "Imagen no encontrada" });
 
                 return BadRequest(result.Errors.Select(e => e.ErrorMessage));
             }
 
-            var updated = await _service.GetByIdAsync(id);
+            var updated = await _service.GetByIdAsync(idPropertyImage);
             return Ok(updated);
         }
 
-        // 🔹 PATCH: api/propertyimage/{id}
-        // Actualiza parcialmente solo los campos enviados
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> Patch(string id, [FromBody] PropertyImageDto image)
+        // 🔹 PATCH: api/propertyimage/{idPropertyImage}
+        [HttpPatch("{idPropertyImage}")]
+        public async Task<IActionResult> Patch(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
-            var result = await _service.UpdatePartialAsync(id, image);
+            var result = await _service.UpdatePartialAsync(idPropertyImage, image);
             if (!result.IsValid)
             {
-                if (result.Errors.Any(e => e.PropertyName == "Id"))
+                if (result.Errors.Any(e => e.PropertyName == "IdPropertyImage"))
                     return NotFound(new { Message = "Imagen no encontrada" });
 
                 return BadRequest(result.Errors.Select(e => e.ErrorMessage));
             }
 
-            var updated = await _service.GetByIdAsync(id);
+            var updated = await _service.GetByIdAsync(idPropertyImage);
             return Ok(updated);
         }
 
-        // 🔹 DELETE: api/propertyimage/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        // 🔹 DELETE: api/propertyimage/{idPropertyImage}
+        [HttpDelete("{idPropertyImage}")]
+        public async Task<IActionResult> Delete(string idPropertyImage)
         {
-            bool deleted = await _service.DeleteAsync(id);
+            bool deleted = await _service.DeleteAsync(idPropertyImage);
             if (!deleted)
                 return NotFound(new { Message = "Imagen no encontrada" });
 

@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using FluentValidation;
 using RealEstate.API.Modules.Property.Dto;
@@ -15,6 +15,7 @@ namespace RealEstate.API.Modules.Property.Service
         private readonly IMongoCollection<PropertyModel> _properties;
         private readonly IValidator<PropertyDto> _validator;
         private readonly IMemoryCache _cache;
+        private readonly TimeSpan _cacheTtl;
 
         public PropertyService(IMongoDatabase database, IValidator<PropertyDto> validator, IConfiguration config, IMemoryCache cache)
         {
@@ -22,6 +23,12 @@ namespace RealEstate.API.Modules.Property.Service
             _properties = database.GetCollection<PropertyModel>(collection);
             _validator = validator;
             _cache = cache;
+
+            var ttlStr = config["CACHE_TTL_MINUTES"];
+            if (int.TryParse(ttlStr, out var minutes) && minutes > 0)
+                _cacheTtl = TimeSpan.FromMinutes(minutes);
+            else
+                _cacheTtl = TimeSpan.FromMinutes(5);
         }
 
         // ===========================================================
@@ -40,7 +47,7 @@ namespace RealEstate.API.Modules.Property.Service
         {
             var validation = await _validator.ValidateAsync(dto);
             if (!validation.IsValid)
-                return ServiceLogResponseWrapper<PropertyDto>.Fail("Errores de validación", validation.Errors.Select(e => e.ErrorMessage));
+                return ServiceLogResponseWrapper<PropertyDto>.Fail("Errores de validaciÃ³n", validation.Errors.Select(e => e.ErrorMessage));
 
             var model = dto.ToModel();
             await _properties.InsertOneAsync(model);
@@ -55,13 +62,12 @@ namespace RealEstate.API.Modules.Property.Service
         {
             var validation = await _validator.ValidateAsync(dto);
             if (!validation.IsValid)
-                return ServiceLogResponseWrapper<PropertyDto>.Fail("Errores de validación", validation.Errors.Select(e => e.ErrorMessage));
+                return ServiceLogResponseWrapper<PropertyDto>.Fail("Errores de validaciÃ³n", validation.Errors.Select(e => e.ErrorMessage));
 
             var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
             if (existing == null)
                 return ServiceLogResponseWrapper<PropertyDto>.Fail("Propiedad no encontrada", statusCode: 404);
 
-            // Actualiza campos editables
             existing.Name = dto.Name;
             existing.Address = dto.Address;
             existing.Price = dto.Price;
@@ -75,7 +81,7 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // PATCH (actualización parcial real)
+        // PATCH (actualizaciÃ³n parcial real)
         // ===========================================================
         public async Task<ServiceLogResponseWrapper<PropertyDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
@@ -95,7 +101,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
 
             if (!updates.Any())
-                return ServiceLogResponseWrapper<PropertyDto>.Fail("No se encontraron campos válidos para actualizar", statusCode: 400);
+                return ServiceLogResponseWrapper<PropertyDto>.Fail("No se encontraron campos vÃ¡lidos para actualizar", statusCode: 400);
 
             var update = builder.Combine(updates);
             await _properties.UpdateOneAsync(p => p.Id == id, update);
@@ -116,15 +122,15 @@ namespace RealEstate.API.Modules.Property.Service
         }
 
         // ===========================================================
-        // GET con filtros y caché
+        // GET con filtros y cachÃ©
         // ===========================================================
-        public async Task<object> GetCachedAsync(string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page = 1, int limit = 6)
+        public async Task<object> GetCachedAsync(string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page = 1, int limit = 6, bool refresh = false)
         {
             page = Math.Max(1, page);
             limit = Math.Clamp(limit, 1, 100);
 
             var cacheKey = $"{name}-{address}-{idOwner}-{minPrice}-{maxPrice}-{page}-{limit}";
-            if (_cache.TryGetValue(cacheKey, out object cached)) return cached;
+            if (!refresh && _cache.TryGetValue(cacheKey, out object? cached)) return cached!;
 
             var (data, totalItems) = await GetAllWithMetaAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
             var result = new
@@ -148,7 +154,8 @@ namespace RealEstate.API.Modules.Property.Service
                 }
             };
 
-            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+            if (!refresh)
+                _cache.Set(cacheKey, result, _cacheTtl);
             return result;
         }
 
@@ -175,3 +182,5 @@ namespace RealEstate.API.Modules.Property.Service
         }
     }
 }
+
+

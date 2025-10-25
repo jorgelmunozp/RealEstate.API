@@ -27,9 +27,10 @@ namespace RealEstate.API.Modules.Property.Controller
             [FromQuery] long? minPrice,
             [FromQuery] long? maxPrice,
             [FromQuery] int page = 1,
-            [FromQuery] int limit = 6)
+            [FromQuery] int limit = 6,
+            [FromQuery] bool refresh = false)
         {
-            var result = await _service.GetCachedAsync(name, address, idOwner, minPrice, maxPrice, page, limit);
+            var result = await _service.GetCachedAsync(name, address, idOwner, minPrice, maxPrice, page, limit, refresh);
             return Ok(result);
         }
 
@@ -57,8 +58,8 @@ namespace RealEstate.API.Modules.Property.Controller
 
             var result = await _service.CreateAsync(property);
             return !result.Success
-                ? StatusCode(result.StatusCode, new { result.Message, result.Errors })
-                : CreatedAtAction(nameof(GetById), new { id = result.Data?.IdProperty }, result.Data);
+                ? StatusCode(result.StatusCode, result)
+                : CreatedAtAction(nameof(GetById), new { id = result.Data?.IdProperty }, result);
         }
 
         // ===========================================================
@@ -73,8 +74,8 @@ namespace RealEstate.API.Modules.Property.Controller
 
             var result = await _service.UpdateAsync(id, property);
             return !result.Success
-                ? StatusCode(result.StatusCode, new { result.Message, result.Errors })
-                : Ok(result.Data);
+                ? StatusCode(result.StatusCode, result)
+                : Ok(result);
         }
 
         // ===========================================================
@@ -88,21 +89,21 @@ namespace RealEstate.API.Modules.Property.Controller
 
             var result = await _service.PatchAsync(id, fields);
             return !result.Success
-                ? StatusCode(result.StatusCode, new { result.Message, result.Errors })
-                : Ok(result.Data);
+                ? StatusCode(result.StatusCode, result)
+                : Ok(result);
         }
 
         // ===========================================================
         // DELETE: api/property/{id}
         // ===========================================================
         [HttpDelete("{id}")]
-        [Authorize(Roles = "admin")]
+        // [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
             var result = await _service.DeleteAsync(id);
             return !result.Success
-                ? StatusCode(result.StatusCode, new { result.Message, result.Errors })
-                : Ok(new { result.Message });
+                ? StatusCode(result.StatusCode, result)
+                : Ok(result);
         }
     }
 }
