@@ -1,5 +1,6 @@
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Model;
@@ -11,29 +12,44 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
     {
         private readonly IMongoCollection<PropertyTraceModel> _traces;
         private readonly IValidator<PropertyTraceDto> _validator;
+        private readonly IMemoryCache _cache;
+        private readonly TimeSpan _cacheTtl;
 
         public PropertyTraceService(
             IMongoDatabase database,
             IValidator<PropertyTraceDto> validator,
-            IConfiguration config)
+            IConfiguration config,
+            IMemoryCache cache)
         {
             var collection = config["MONGO_COLLECTION_PROPERTYTRACE"]
                 ?? throw new Exception("MONGO_COLLECTION_PROPERTYTRACE no definida");
 
             _traces = database.GetCollection<PropertyTraceModel>(collection);
             _validator = validator;
+            _cache = cache;
+            var ttlStr = config["CACHE_TTL_MINUTES"];
+            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0) ? TimeSpan.FromMinutes(m) : TimeSpan.FromMinutes(5);
         }
 
         // 🔹 Obtener todas las trazas
-        public async Task<List<PropertyTraceDto>> GetAllAsync(string? idProperty = null)
+        public async Task<List<PropertyTraceDto>> GetAllAsync(string? idProperty = null, bool refresh = false)
         {
+            var key = $"ptrace:{idProperty ?? "all"}";
+            if (!refresh)
+            {
+                var cached = _cache.Get<List<PropertyTraceDto>>(key);
+                if (cached != null) return cached;
+            }
+
             var filter = Builders<PropertyTraceModel>.Filter.Empty;
 
             if (!string.IsNullOrEmpty(idProperty))
                 filter &= Builders<PropertyTraceModel>.Filter.Eq(t => t.IdProperty, idProperty);
 
             var traces = await _traces.Find(filter).ToListAsync();
-            return traces.Select(PropertyTraceMapper.ToDto).ToList();
+            var result = traces.Select(PropertyTraceMapper.ToDto).ToList();
+            _cache.Set(key, result, _cacheTtl);
+            return result;
         }
 
         // 🔹 Obtener una traza por ID

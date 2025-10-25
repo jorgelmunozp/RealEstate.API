@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using DotNetEnv;
 using MongoDB.Driver;
 using FluentValidation;
@@ -47,15 +47,15 @@ builder.Configuration.AddEnvironmentVariables();
 var config = builder.Configuration;
 
 // ==========================================
-// ðŸ”¹ CONFIGURACIÃ“N DE MONGODB
+// 🔹 CONFIGURACIÓN DE MONGODB
 // ==========================================
 var mongoConnectionString = config["MONGO_CONNECTION"] ?? "mongodb://localhost:27017";
 var mongoDbName = config["MONGO_DATABASE"] ?? "RealEstate";
 
 if (string.IsNullOrWhiteSpace(mongoConnectionString))
-    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacÃ­a.");
+    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacía.");
 if (string.IsNullOrWhiteSpace(mongoDbName))
-    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacÃ­a.");
+    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacía.");
 
 Console.WriteLine($"MongoDB Connection: {mongoConnectionString}");
 Console.WriteLine($"MongoDB Database: {mongoDbName}");
@@ -64,7 +64,7 @@ builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName));
 
 // ==========================================
-// ðŸ”¹ JSON SIN camelCase
+// 🔹 JSON SIN camelCase
 // ==========================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
@@ -75,9 +75,9 @@ builder.Services.AddControllers()
     });
 
 // ==========================================
-// ðŸ”¹ JWT DESDE VARIABLES DE ENTORNO
+// 🔹 JWT DESDE VARIABLES DE ENTORNO
 // ==========================================
-var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La variable JWT_SECRET no estÃ¡ definida");
+var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La variable JWT_SECRET no está definida");
 var issuer = config["JWT_ISSUER"] ?? "RealEstateAPI";
 var audience = config["JWT_AUDIENCE"] ?? "UsuariosAPI";
 var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? config["JWT_EXPIRY"] ?? "60";
@@ -88,7 +88,7 @@ builder.Configuration["JwtSettings:Audience"] = audience;
 builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
 
 // ==========================================
-// ðŸ”¹ VALIDACIÃ“N GLOBAL Y FLUENTVALIDATION
+// 🔹 VALIDACIÓN GLOBAL Y FLUENTVALIDATION
 // ==========================================
 builder.Services.AddControllers(o => o.Filters.Add<ValidationExceptionFilter>())
     .AddNewtonsoftJson(o =>
@@ -106,7 +106,7 @@ builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Forzar nombres de propiedad en validaciónes a camelCase (afecta claves en ModelState)
+// Forzar nombres de propiedad en validaci�nes a camelCase (afecta claves en ModelState)
 FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expression) =>
 {
     string? name = member?.Name;
@@ -130,7 +130,7 @@ builder.Services.Configure<ApiBehaviorOptions>(o =>
         .ToArray();
 
     var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<object>.Fail(
-        message: "Errores de validación",
+        message: "Errores de validaci�n",
         errors: errors,
         statusCode: 400
     );
@@ -140,15 +140,15 @@ builder.Services.Configure<ApiBehaviorOptions>(o =>
 });
 
 // ==========================================
-// ðŸ”¹ CACHÃ‰
+// 🔹 CACHÉ
 // ==========================================
 builder.Services.AddMemoryCache();
 
 // ==========================================
-// ðŸ”¹ SERVICIOS
+// 🔹 SERVICIOS
 // ==========================================
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<UserService>();
@@ -170,7 +170,7 @@ builder.Services.AddSingleton<JwtService>();
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
 // ==========================================
-// ðŸ”¹ CORS
+// 🔹 CORS
 // ==========================================
 builder.Services.AddCors(o =>
 {
@@ -178,7 +178,7 @@ builder.Services.AddCors(o =>
 });
 
 // ==========================================
-// ðŸ”¹ JWT AUTENTICACIÃ“N
+// 🔹 JWT AUTENTICACIÓN
 // ==========================================
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
 builder.Services.AddAuthentication(o =>
@@ -204,7 +204,7 @@ builder.Services.AddAuthentication(o =>
 builder.Services.AddAuthorization();
 
 // ==========================================
-// ðŸ”¹ LOGGING
+// 🔹 LOGGING
 // ==========================================
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(o =>
@@ -214,7 +214,7 @@ builder.Logging.AddSimpleConsole(o =>
 });
 
 // ==========================================
-// ðŸ”¹ APP
+// 🔹 APP
 // ==========================================
 var app = builder.Build();
 app.UseMiddleware<LoggingMiddleware>();
@@ -233,7 +233,7 @@ app.UseStatusCodePages(async context =>
         401 => "No autorizado",
         403 => "Prohibido",
         404 => "Recurso no encontrado",
-        405 => "Método no permitido",
+        405 => "M�todo no permitido",
         415 => "Tipo de contenido no soportado",
         _ => "Error"
     };
@@ -257,6 +257,7 @@ app.UseStatusCodePages(async context =>
 });
 app.MapControllers();
 app.Run();
+
 
 
 

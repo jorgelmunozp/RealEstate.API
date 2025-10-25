@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
 using FluentValidation.Results;
 using MongoDB.Driver;
 using RealEstate.API.Modules.PropertyImage.Dto;
@@ -11,14 +12,19 @@ namespace RealEstate.API.Modules.PropertyImage.Service
     {
         private readonly IMongoCollection<PropertyImageModel> _images;
         private readonly IValidator<PropertyImageDto> _validator;
+        private readonly IMemoryCache _cache;
+        private readonly TimeSpan _cacheTtl;
 
-        public PropertyImageService(IMongoDatabase database, IValidator<PropertyImageDto> validator, IConfiguration config)
+        public PropertyImageService(IMongoDatabase database, IValidator<PropertyImageDto> validator, IConfiguration config, IMemoryCache cache)
         {
             var collection = config["MONGO_COLLECTION_PROPERTYIMAGE"]
                 ?? throw new Exception("MONGO_COLLECTION_PROPERTYIMAGE no definida");
 
             _images = database.GetCollection<PropertyImageModel>(collection);
             _validator = validator;
+            _cache = cache;
+            var ttlStr = config["CACHE_TTL_MINUTES"];
+            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0) ? TimeSpan.FromMinutes(m) : TimeSpan.FromMinutes(5);
         }
 
         // 🔹 Obtener todas las imágenes con filtros y paginación
@@ -26,8 +32,16 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             string? idProperty = null,
             bool? enabled = null,
             int page = 1,
-            int limit = 6)
+            int limit = 6,
+            bool refresh = false)
         {
+            var cacheKey = $"pimg:{idProperty}-{enabled}-{page}-{limit}";
+            if (!refresh)
+            {
+                var cached = _cache.Get<List<PropertyImageDto>>(cacheKey);
+                if (cached != null) return cached;
+            }
+
             var filter = Builders<PropertyImageModel>.Filter.Empty;
 
             if (!string.IsNullOrEmpty(idProperty))
@@ -40,8 +54,9 @@ namespace RealEstate.API.Modules.PropertyImage.Service
                 .Skip((page - 1) * limit)
                 .Limit(limit)
                 .ToListAsync();
-
-            return images.Select(PropertyImageMapper.ToDto);
+            var result = images.Select(PropertyImageMapper.ToDto).ToList();
+            _cache.Set(cacheKey, result, _cacheTtl);
+            return result;
         }
 
         // 🔹 Obtener imagen por IdPropertyImage

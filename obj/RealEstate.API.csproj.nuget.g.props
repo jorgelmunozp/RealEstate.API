@@ -12,11 +12,6 @@
   <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <SourceRoot Include="C:\Users\jorge\.nuget\packages\" />
   </ItemGroup>
-  <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <Import Project="$(NuGetPackageRoot)microsoft.testplatform.testhost\18.0.0\build\net8.0\Microsoft.TestPlatform.TestHost.props" Condition="Exists('$(NuGetPackageRoot)microsoft.testplatform.testhost\18.0.0\build\net8.0\Microsoft.TestPlatform.TestHost.props')" />
-    <Import Project="$(NuGetPackageRoot)microsoft.codecoverage\18.0.0\build\netstandard2.0\Microsoft.CodeCoverage.props" Condition="Exists('$(NuGetPackageRoot)microsoft.codecoverage\18.0.0\build\netstandard2.0\Microsoft.CodeCoverage.props')" />
-    <Import Project="$(NuGetPackageRoot)microsoft.net.test.sdk\18.0.0\build\net8.0\Microsoft.NET.Test.Sdk.props" Condition="Exists('$(NuGetPackageRoot)microsoft.net.test.sdk\18.0.0\build\net8.0\Microsoft.NET.Test.Sdk.props')" />
-  </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <PkgAWSSDK_Core Condition=" '$(PkgAWSSDK_Core)' == '' ">C:\Users\jorge\.nuget\packages\awssdk.core\3.7.100.14</PkgAWSSDK_Core>
     <PkgAWSSDK_SecurityToken Condition=" '$(PkgAWSSDK_SecurityToken)' == '' ">C:\Users\jorge\.nuget\packages\awssdk.securitytoken\3.7.100.14</PkgAWSSDK_SecurityToken>

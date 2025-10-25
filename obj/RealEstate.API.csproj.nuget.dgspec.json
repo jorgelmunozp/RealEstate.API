@@ -56,10 +56,6 @@
               "target": "Package",
               "version": "[3.1.1, )"
             },
-            "FluentAssertions": {
-              "target": "Package",
-              "version": "[8.7.1, )"
-            },
             "FluentValidation.AspNetCore": {
               "target": "Package",
               "version": "[11.3.1, )"
@@ -79,10 +75,6 @@
             "Microsoft.Extensions.Caching.Memory": {
               "target": "Package",
               "version": "[7.0.0, )"
-            },
-            "Microsoft.NET.Test.Sdk": {
-              "target": "Package",
-              "version": "[18.0.0, )"
             },
             "MongoDB.Driver": {
               "target": "Package",

@@ -11,11 +11,11 @@ namespace RealEstate.API.Modules.Auth.Controller
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly AuthService _authService;
+        private readonly IAuthService _authService;
         private readonly IValidator<LoginDto> _validator;
         private readonly IValidator<UserDto> _userValidator;
 
-        public AuthController(AuthService authService, IValidator<LoginDto> validator, IValidator<UserDto> userValidator)
+        public AuthController(IAuthService authService, IValidator<LoginDto> validator, IValidator<UserDto> userValidator)
         {
             _authService = authService;
             _validator = validator;

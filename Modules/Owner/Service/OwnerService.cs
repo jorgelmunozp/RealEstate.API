@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
 using FluentValidation.Results;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,21 +13,33 @@ namespace RealEstate.API.Modules.Owner.Service
     {
         private readonly IMongoCollection<OwnerModel> _owners;
         private readonly IValidator<OwnerDto> _validator;
+        private readonly IMemoryCache _cache;
+        private readonly TimeSpan _cacheTtl;
 
-        public OwnerService(IMongoDatabase database, IValidator<OwnerDto> validator, IConfiguration config)
+        public OwnerService(IMongoDatabase database, IValidator<OwnerDto> validator, IConfiguration config, IMemoryCache cache)
         {
             var collection = config["MONGO_COLLECTION_OWNER"]
                 ?? throw new Exception("MONGO_COLLECTION_OWNER no definida");
 
             _owners = database.GetCollection<OwnerModel>(collection);
             _validator = validator;
+            _cache = cache;
+            var ttlStr = config["CACHE_TTL_MINUTES"];
+            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0) ? TimeSpan.FromMinutes(m) : TimeSpan.FromMinutes(5);
         }
 
         // ===========================================================
         // GET: con filtros opcionales
         // ===========================================================
-        public async Task<List<OwnerDto>> GetAsync(string? name = null, string? address = null)
+        public async Task<List<OwnerDto>> GetAsync(string? name = null, string? address = null, bool refresh = false)
         {
+            var cacheKey = $"owner:{name}-{address}";
+            if (!refresh)
+            {
+                var cached = _cache.Get<List<OwnerDto>>(cacheKey);
+                if (cached != null) return cached;
+            }
+
             var filter = Builders<OwnerModel>.Filter.Empty;
 
             if (!string.IsNullOrEmpty(name))
@@ -36,7 +49,9 @@ namespace RealEstate.API.Modules.Owner.Service
                 filter &= Builders<OwnerModel>.Filter.Regex(o => o.Address, new BsonRegularExpression(address, "i"));
 
             var owners = await _owners.Find(filter).ToListAsync();
-            return owners.Select(OwnerMapper.ToDto).ToList();
+            var result = owners.Select(OwnerMapper.ToDto).ToList();
+            _cache.Set(cacheKey, result, _cacheTtl);
+            return result;
         }
 
         // ===========================================================

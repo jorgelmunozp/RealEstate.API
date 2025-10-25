@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Service;
 
@@ -17,9 +18,9 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
 
         // 🔹 GET api/propertytrace?idProperty=xxxx
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? idProperty)
+        public async Task<IActionResult> GetAll([FromQuery] string? idProperty, [FromQuery] bool refresh = false)
         {
-            var traces = await _service.GetAllAsync(idProperty);
+            var traces = await _service.GetAllAsync(idProperty, refresh);
             return Ok(traces);
         }
 
@@ -37,6 +38,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
         // 🔹 POST api/propertytrace
         // Recibe lista de DTOs (una o varias)
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] IEnumerable<PropertyTraceDto> traces)
         {
             if (traces == null || !traces.Any())
@@ -49,6 +51,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
         // 🔹 PUT api/propertytrace/{id}
         // Reemplaza el registro completo
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyTraceDto trace)
         {
             var result = await _service.UpdateAsync(id, trace);
@@ -63,9 +66,9 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
             return Ok(updated);
         }
 
-        // 🔹 PATCH api/propertytrace/{id}
-        // Actualización parcial (ideal para frontend moderno)
+        // 🔹 PATCH api/propertytrace/{id} - Actualización parcial
         [HttpPatch("{id}")]
+        [Authorize]
         public async Task<IActionResult> Patch(string id, [FromBody] PropertyTraceDto trace)
         {
             var result = await _service.UpdatePartialAsync(id, trace);
@@ -82,6 +85,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
 
         // 🔹 DELETE api/propertytrace/{id}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteAsync(id);

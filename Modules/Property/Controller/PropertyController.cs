@@ -50,7 +50,7 @@ namespace RealEstate.API.Modules.Property.Controller
         // POST: api/property
         // ===========================================================
         [HttpPost]
-        // [Authorize] // (opcional)
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] PropertyDto property)
         {
             if (property == null)
@@ -82,6 +82,7 @@ namespace RealEstate.API.Modules.Property.Controller
         // PATCH: api/property/{id}
         // ===========================================================
         [HttpPatch("{id}")]
+        [Authorize]
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)
@@ -97,7 +98,7 @@ namespace RealEstate.API.Modules.Property.Controller
         // DELETE: api/property/{id}
         // ===========================================================
         [HttpDelete("{id}")]
-        // [Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
             var result = await _service.DeleteAsync(id);

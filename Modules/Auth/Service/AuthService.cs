@@ -8,7 +8,7 @@ using FluentValidation.Results;
 
 namespace RealEstate.API.Modules.Auth.Service
 {
-    public class AuthService
+    public class AuthService : IAuthService
     {
         private readonly IMongoCollection<UserModel> _userCollection;
         private readonly JwtService _jwtService;

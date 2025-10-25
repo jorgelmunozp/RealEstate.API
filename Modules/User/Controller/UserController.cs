@@ -19,21 +19,22 @@ namespace RealEstate.API.Modules.User.Controller
         // GET: api/user
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll([FromQuery] bool refresh = false) =>
+            Ok(await _service.GetAllAsync(refresh));
 
         // GET: api/user/{email}
         [HttpGet("{email}")]
         [Authorize]
-        public async Task<IActionResult> GetByEmail(string email)
+        public async Task<IActionResult> GetByEmail(string email, [FromQuery] bool refresh = false)
         {
-            var user = await _service.GetByEmailAsync(email);
+            var user = await _service.GetByEmailAsync(email, refresh);
             if (user == null) return NotFound(new { Message = "Usuario no encontrado" });
             return Ok(user);
         }
 
         // POST: api/user
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] UserDto user)
         {
             var result = await _service.CreateAsync(user);
@@ -62,7 +63,7 @@ namespace RealEstate.API.Modules.User.Controller
 
         // DELETE: api/user/{email}
         [HttpDelete("{email}")]
-        [Authorize]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string email)
         {
             bool deleted = await _service.DeleteAsync(email);

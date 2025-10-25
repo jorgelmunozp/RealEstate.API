@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Service;
 
@@ -21,9 +22,10 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             [FromQuery] string? idProperty,
             [FromQuery] bool? enabled,
             [FromQuery] int page = 1,
-            [FromQuery] int limit = 10)
+            [FromQuery] int limit = 10,
+            [FromQuery] bool refresh = false)
         {
-            var result = await _service.GetAllAsync(idProperty, enabled, page, limit);
+            var result = await _service.GetAllAsync(idProperty, enabled, page, limit, refresh);
             return Ok(result);
         }
 
@@ -51,6 +53,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 POST: api/propertyimage
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] PropertyImageDto image)
         {
             var id = await _service.CreateAsync(image);
@@ -59,6 +62,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 PUT: api/propertyimage/{idPropertyImage}
         [HttpPut("{idPropertyImage}")]
+        [Authorize]
         public async Task<IActionResult> Update(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
             var result = await _service.UpdateAsync(idPropertyImage, image);
@@ -76,6 +80,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 PATCH: api/propertyimage/{idPropertyImage}
         [HttpPatch("{idPropertyImage}")]
+        [Authorize]
         public async Task<IActionResult> Patch(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
             var result = await _service.UpdatePartialAsync(idPropertyImage, image);
@@ -93,6 +98,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 DELETE: api/propertyimage/{idPropertyImage}
         [HttpDelete("{idPropertyImage}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string idPropertyImage)
         {
             bool deleted = await _service.DeleteAsync(idPropertyImage);

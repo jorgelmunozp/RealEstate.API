@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.Owner.Service;
 
@@ -15,9 +16,9 @@ namespace RealEstate.API.Modules.Owner.Controller
         // GET: api/owner?name=x&address=y
         // ===========================================================
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? name, [FromQuery] string? address)
+        public async Task<IActionResult> GetAll([FromQuery] string? name, [FromQuery] string? address, [FromQuery] bool refresh = false)
         {
-            var result = await _service.GetAsync(name, address);
+            var result = await _service.GetAsync(name, address, refresh);
             return result == null
                 ? NotFound(new { message = "No se encontraron propietarios con los criterios dados" })
                 : Ok(result);
@@ -39,6 +40,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // POST: api/owner
         // ===========================================================
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] OwnerDto owner)
         {
             var id = await _service.CreateAsync(owner);
@@ -49,6 +51,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // PUT: api/owner/{id}
         // ===========================================================
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> Update(string id, [FromBody] OwnerDto owner)
         {
             var result = await _service.UpdateAsync(id, owner);
@@ -67,6 +70,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // PATCH: api/owner/{id}
         // ===========================================================
         [HttpPatch("{id}")]
+        [Authorize]
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)
@@ -82,6 +86,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // DELETE: api/owner/{id}
         // ===========================================================
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteAsync(id);
