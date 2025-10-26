@@ -7,39 +7,56 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
     {
         public PropertyImageDtoValidator()
         {
-            // 🔹 Validaciones generales
+            // ===========================================================
+            // 🔹 Validación común para todas las operaciones
+            // ===========================================================
             RuleFor(p => p.Enabled)
                 .NotNull()
-                .WithMessage("El estado Enabled no puede ser nulo.");
+                .WithMessage("El campo 'Enabled' no puede ser nulo.");
 
-            // 🔹 Creación (POST)
+            // ===========================================================
+            // 🔹 Validación específica para creación (POST)
+            // ===========================================================
             When(IsCreateOperation, () =>
             {
                 RuleFor(p => p.File)
-                    .NotEmpty().WithMessage("La imagen de la propiedad es obligatoria al crear.");
+                    .NotEmpty()
+                    .WithMessage("El archivo de imagen es obligatorio al crear una nueva propiedad.");
 
                 RuleFor(p => p.IdProperty)
-                    .NotEmpty().WithMessage("El Id de la propiedad es obligatorio al crear.");
+                    .NotEmpty()
+                    .WithMessage("El IdProperty es obligatorio al crear una imagen.");
             });
 
-            // 🔹 Actualización (PUT / PATCH)
+            // ===========================================================
+            // 🔹 Validación específica para actualización (PUT / PATCH)
+            // ===========================================================
             When(IsUpdateOperation, () =>
             {
+                RuleFor(p => p.IdPropertyImage)
+                    .NotEmpty()
+                    .WithMessage("El IdPropertyImage es obligatorio para actualizar una imagen.");
+
+                // Solo validar contenido del archivo si se envía
                 RuleFor(p => p.File)
-                    .Must(f => string.IsNullOrEmpty(f) || f.Length > 0)
+                    .Must(f => string.IsNullOrEmpty(f) || f.Length > 10)
                     .WithMessage("El archivo de imagen enviado no es válido.");
 
+                // Validar IdProperty si se intenta modificar
                 RuleFor(p => p.IdProperty)
-                    .Length(0, 50)
+                    .MaximumLength(50)
                     .When(p => !string.IsNullOrEmpty(p.IdProperty))
-                    .WithMessage("El Id de la propiedad no puede exceder 50 caracteres.");
+                    .WithMessage("El IdProperty no puede exceder los 50 caracteres.");
             });
         }
 
-        private bool IsCreateOperation(PropertyImageDto dto) =>
+        // ===========================================================
+        // 🔹 Helpers para distinguir tipo de operación
+        // ===========================================================
+        private static bool IsCreateOperation(PropertyImageDto dto) =>
             string.IsNullOrEmpty(dto.IdPropertyImage);
 
-        private bool IsUpdateOperation(PropertyImageDto dto) =>
+        private static bool IsUpdateOperation(PropertyImageDto dto) =>
             !string.IsNullOrEmpty(dto.IdPropertyImage);
     }
 }

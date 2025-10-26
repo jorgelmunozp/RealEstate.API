@@ -56,6 +56,10 @@ namespace RealEstate.API.Modules.Property.Controller
             if (property == null)
                 return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
 
+            // ✅ Asegura que el binding incluya Image correctamente
+            if (property.Image != null && string.IsNullOrWhiteSpace(property.Image.IdProperty))
+                property.Image.IdProperty = property.IdProperty ?? string.Empty;
+
             var result = await _service.CreateAsync(property);
             return !result.Success
                 ? StatusCode(result.StatusCode, result)
@@ -71,6 +75,10 @@ namespace RealEstate.API.Modules.Property.Controller
         {
             if (property == null)
                 return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
+
+            // ✅ Corrige posible pérdida del Id en imagen embebida
+            if (property.Image != null && string.IsNullOrWhiteSpace(property.Image.IdProperty))
+                property.Image.IdProperty = id;
 
             var result = await _service.UpdateAsync(id, property);
             return !result.Success

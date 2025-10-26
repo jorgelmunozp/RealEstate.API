@@ -16,7 +16,9 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             _service = service;
         }
 
+        // ===========================================================
         // 🔹 GET: api/propertyimage?idProperty&enabled&page&limit
+        // ===========================================================
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? idProperty,
@@ -29,42 +31,57 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             return Ok(result);
         }
 
+        // ===========================================================
         // 🔹 GET: api/propertyimage/{idPropertyImage}
+        // ===========================================================
         [HttpGet("{idPropertyImage}")]
         public async Task<IActionResult> GetById(string idPropertyImage)
         {
             var image = await _service.GetByIdAsync(idPropertyImage);
-            if (image == null)
-                return NotFound(new { Message = "Imagen no encontrada" });
-
-            return Ok(image);
+            return image == null
+                ? NotFound(new { Message = "Imagen no encontrada" })
+                : Ok(image);
         }
 
+        // ===========================================================
         // 🔹 GET: api/propertyimage/property/{propertyId}
+        // ===========================================================
         [HttpGet("property/{propertyId}")]
         public async Task<IActionResult> GetByPropertyId(string propertyId)
         {
             var image = await _service.GetByPropertyIdAsync(propertyId);
-            if (image == null)
-                return NotFound(new { Message = "No se encontró imagen asociada a esta propiedad" });
-
-            return Ok(image);
+            return image == null
+                ? NotFound(new { Message = "No se encontró imagen asociada a esta propiedad" })
+                : Ok(image);
         }
 
+        // ===========================================================
         // 🔹 POST: api/propertyimage
+        // ===========================================================
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> Create([FromBody] PropertyImageDto image)
         {
+            if (image == null)
+                return BadRequest(new { Message = "El cuerpo de la solicitud no puede estar vacío" });
+
+            if (string.IsNullOrWhiteSpace(image.IdProperty))
+                return BadRequest(new { Message = "IdProperty es requerido" });
+
             var id = await _service.CreateAsync(image);
             return CreatedAtAction(nameof(GetById), new { idPropertyImage = id }, new { IdPropertyImage = id });
         }
 
+        // ===========================================================
         // 🔹 PUT: api/propertyimage/{idPropertyImage}
+        // ===========================================================
         [HttpPut("{idPropertyImage}")]
         [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
+            if (image == null)
+                return BadRequest(new { Message = "El cuerpo de la solicitud no puede estar vacío" });
+
             var result = await _service.UpdateAsync(idPropertyImage, image);
             if (!result.IsValid)
             {
@@ -78,11 +95,16 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             return Ok(updated);
         }
 
+        // ===========================================================
         // 🔹 PATCH: api/propertyimage/{idPropertyImage}
+        // ===========================================================
         [HttpPatch("{idPropertyImage}")]
         [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
+            if (image == null)
+                return BadRequest(new { Message = "El cuerpo de la solicitud no puede estar vacío" });
+
             var result = await _service.UpdatePartialAsync(idPropertyImage, image);
             if (!result.IsValid)
             {
@@ -96,16 +118,17 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
             return Ok(updated);
         }
 
+        // ===========================================================
         // 🔹 DELETE: api/propertyimage/{idPropertyImage}
+        // ===========================================================
         [HttpDelete("{idPropertyImage}")]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string idPropertyImage)
         {
-            bool deleted = await _service.DeleteAsync(idPropertyImage);
-            if (!deleted)
-                return NotFound(new { Message = "Imagen no encontrada" });
-
-            return NoContent();
+            var deleted = await _service.DeleteAsync(idPropertyImage);
+            return !deleted
+                ? NotFound(new { Message = "Imagen no encontrada" })
+                : NoContent();
         }
     }
 }

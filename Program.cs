@@ -11,6 +11,9 @@ using Microsoft.Extensions.Caching.Memory;
 using RealEstate.API.Middleware;
 using RealEstate.API.Mappings;
 
+// Token
+using RealEstate.API.Modules.Token.Service;
+
 // Auth
 using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.Auth.Validator;
@@ -41,6 +44,9 @@ using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Validator;
 using RealEstate.API.Modules.PropertyTrace.Service;
 
+// Password
+using RealEstate.API.Modules.Password.Service;
+
 DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -64,7 +70,7 @@ builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName));
 
 // ==========================================
-// 🔹 JSON SIN camelCase
+// 🔹 JSON (camelCase global)
 // ==========================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
@@ -81,32 +87,22 @@ var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La 
 var issuer = config["JWT_ISSUER"] ?? "RealEstateAPI";
 var audience = config["JWT_AUDIENCE"] ?? "UsuariosAPI";
 var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? config["JWT_EXPIRY"] ?? "60";
+var refreshDays = config["JWT_REFRESH_DAYS"] ?? "7";
 
 builder.Configuration["JwtSettings:SecretKey"] = secretKey;
 builder.Configuration["JwtSettings:Issuer"] = issuer;
 builder.Configuration["JwtSettings:Audience"] = audience;
 builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
+builder.Configuration["JwtSettings:RefreshDays"] = refreshDays;
 
 // ==========================================
 // 🔹 VALIDACIÓN GLOBAL Y FLUENTVALIDATION
 // ==========================================
-builder.Services.AddControllers(o => o.Filters.Add<ValidationExceptionFilter>())
-    .AddNewtonsoftJson(o =>
-    {
-        o.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver
-        {
-            NamingStrategy = new Newtonsoft.Json.Serialization.CamelCaseNamingStrategy(processDictionaryKeys: true, overrideSpecifiedNames: false)
-        };
-        o.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        o.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
-        o.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-    });
-
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Forzar nombres de propiedad en validaci�nes a camelCase (afecta claves en ModelState)
+// Forzar nombres de propiedad en validaciones a camelCase (afecta claves en ModelState)
 FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expression) =>
 {
     string? name = member?.Name;
@@ -122,21 +118,21 @@ FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, e
 builder.Services.Configure<ApiBehaviorOptions>(o =>
 {
     o.InvalidModelStateResponseFactory = ctx =>
-{
-    var errors = ctx.ModelState
-                .Where(x => x.Value != null && x.Value.Errors.Count > 0)
-                .SelectMany(v => v.Value!.Errors)
-        .Select(e => e.ErrorMessage)
-        .ToArray();
+    {
+        var errors = ctx.ModelState
+                    .Where(x => x.Value != null && x.Value.Errors.Count > 0)
+                    .SelectMany(v => v.Value!.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToArray();
 
-    var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<object>.Fail(
-        message: "Errores de validaci�n",
-        errors: errors,
-        statusCode: 400
-    );
+        var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<object>.Fail(
+            message: "Errores de validación",
+            errors: errors,
+            statusCode: 400
+        );
 
-    return new BadRequestObjectResult(payload);
-};
+        return new BadRequestObjectResult(payload);
+    };
 });
 
 // ==========================================
@@ -153,19 +149,22 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<UserService>();
 
+builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
+builder.Services.AddScoped<PropertyImageService>(); // 🔹 antes de PropertyService
+
 builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
 builder.Services.AddScoped<PropertyService>();
 
 builder.Services.AddScoped<IValidator<OwnerDto>, OwnerDtoValidator>();
 builder.Services.AddScoped<OwnerService>();
 
-builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
-builder.Services.AddScoped<PropertyImageService>();
-
 builder.Services.AddScoped<IValidator<PropertyTraceDto>, PropertyTraceDtoValidator>();
 builder.Services.AddScoped<PropertyTraceService>();
 
+// 🔹 Password y Token
+builder.Services.AddScoped<PasswordService>();
 builder.Services.AddSingleton<JwtService>();
+
 // AutoMapper (si se utiliza MappingProfile)
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
@@ -233,7 +232,7 @@ app.UseStatusCodePages(async context =>
         401 => "No autorizado",
         403 => "Prohibido",
         404 => "Recurso no encontrado",
-        405 => "M�todo no permitido",
+        405 => "Método no permitido",
         415 => "Tipo de contenido no soportado",
         _ => "Error"
     };
@@ -255,13 +254,6 @@ app.UseStatusCodePages(async context =>
     );
     await res.WriteAsync(json);
 });
+
 app.MapControllers();
 app.Run();
-
-
-
-
-
-
-
-

@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using RealEstate.API.Modules.User.Model;
+using RealEstate.API.Modules.Token.Service;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Mail;
@@ -14,95 +14,152 @@ namespace RealEstate.API.Modules.Password.Service
     {
         private readonly IMongoCollection<UserModel> _users;
         private readonly IConfiguration _config;
+        private readonly JwtService _jwtService;
 
         public PasswordService(IMongoDatabase database, IConfiguration config)
         {
-            _config = config;
-            var collection = config["MONGO_COLLECTION_USER"]
-                            ?? throw new Exception("MONGO_COLLECTION_USER no definida");
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+
+            var collection = GetEnv("MONGO_COLLECTION_USER", _config["MONGO_COLLECTION_USER"]);
+            if (string.IsNullOrWhiteSpace(collection))
+                throw new Exception("MONGO_COLLECTION_USER no definida");
+
             _users = database.GetCollection<UserModel>(collection);
+            _jwtService = new JwtService(config);
         }
 
+        // =========================================================
+        // 🔹 Helper: Obtener variable desde entorno o IConfiguration
+        // =========================================================
+        private string? GetEnv(string key, string? fallback = null)
+        {
+            var fromConfig = _config[key];
+            if (!string.IsNullOrWhiteSpace(fromConfig)) return fromConfig;
+
+            var fromEnv = Environment.GetEnvironmentVariable(key);
+            return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : fallback;
+        }
+
+        // =========================================================
+        // 🔹 Enviar correo de recuperación
+        // =========================================================
         public async Task<object> SendPasswordRecoveryEmail(string email)
         {
-            var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
-            if (user == null) throw new InvalidOperationException($"No existe usuario con el email {email}");
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("El correo electrónico es requerido.");
 
+            var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+            if (user == null)
+                throw new InvalidOperationException($"No existe usuario con el email {email}");
+
+            // ✅ Generar token de recuperación usando JwtService
             var token = GenerateResetToken(user.Id);
 
-            var frontendUrl = _config["FRONTEND_URL"];
-            var baseUrl = (frontendUrl ?? "http://localhost:3000").TrimEnd('/');
+            var frontendUrl = GetEnv("FRONTEND_URL", "http://localhost:3000");
+            var baseUrl = frontendUrl.TrimEnd('/');
             var resetLink = $"{baseUrl}/password-reset/{token}";
 
-            var smtpHost = _config["SMTP_HOST"];
-            var smtpPortStr = _config["SMTP_PORT"] ?? "587";
-            var smtpUser = _config["SMTP_USER"];
-            var smtpPass = _config["SMTP_PASS"];
+            // 📧 SMTP settings
+            var smtpHost = GetEnv("SMTP_HOST", "smtp.gmail.com");
+            var smtpPortStr = GetEnv("SMTP_PORT", "587");
+            var smtpUser = GetEnv("SMTP_USER");
+            var smtpPass = GetEnv("SMTP_PASS");
 
             if (!int.TryParse(smtpPortStr, out var smtpPort)) smtpPort = 587;
 
-            if (!string.IsNullOrWhiteSpace(smtpHost) && !string.IsNullOrWhiteSpace(smtpUser) && !string.IsNullOrWhiteSpace(smtpPass))
+            if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpUser) || string.IsNullOrWhiteSpace(smtpPass))
+                throw new InvalidOperationException("Configuración SMTP incompleta.");
+
+            using var client = new SmtpClient(smtpHost, smtpPort)
             {
-                using var client = new SmtpClient(smtpHost, smtpPort)
-                {
-                    EnableSsl = smtpPort == 465 || smtpPort == 587,
-                    Credentials = new NetworkCredential(smtpUser, smtpPass)
-                };
+                EnableSsl = smtpPort == 465 || smtpPort == 587,
+                Credentials = new NetworkCredential(smtpUser, smtpPass)
+            };
 
-                var msg = new MailMessage
-                {
-                    From = new MailAddress(smtpUser, "Soporte"),
-                    Subject = "Real Estate - Recuperación de contraseña",
-                    Body = $@"<h2>Hola {WebUtility.HtmlEncode(user.Name)}</h2>
-<p>Has solicitado restablecer tu contraseña de Real Estate</p>
-<p>Haz clic en el siguiente enlace para establecer una nueva contraseña (válido por 15 minutos):</p>
-<a href=""{resetLink}"">Restablecer contraseña</a>
-<p style=""color:gray;font-size:12px;"">Este correo fue generado automáticamente, no respondas a este mensaje.</p>",
-                    IsBodyHtml = true
-                };
-                msg.To.Add(email);
+            var msg = new MailMessage
+            {
+                From = new MailAddress(smtpUser, "Soporte RealEstate"),
+                Subject = "Real Estate - Recuperación de contraseña",
+                Body = $@"
+                    <h2>Hola {WebUtility.HtmlEncode(user.Name)}</h2>
+                    <p>Has solicitado restablecer tu contraseña.</p>
+                    <p>Haz clic en el siguiente enlace para establecer una nueva contraseña (válido por 15 minutos):</p>
+                    <p><a href=""{resetLink}"" target=""_blank"">Restablecer contraseña</a></p>
+                    <p style=""color:gray;font-size:12px;"">
+                        Este correo fue generado automáticamente, no respondas a este mensaje.
+                    </p>",
+                IsBodyHtml = true
+            };
+            msg.To.Add(email);
 
-                await client.SendMailAsync(msg);
-            }
+            await client.SendMailAsync(msg);
 
             return new { message = $"Enlace de recuperación enviado al correo {email}" };
         }
 
+        // =========================================================
+        // 🔹 Verificar token de recuperación
+        // =========================================================
         public object VerifyResetToken(string token)
         {
-            if (string.IsNullOrWhiteSpace(token)) throw new InvalidOperationException("Token requerido");
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Token requerido.");
 
-            var principal = ValidateToken(token);
-            var id = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            if (string.IsNullOrWhiteSpace(id)) throw new InvalidOperationException("Token inválido");
-            return new { message = "Valid token", id };
+            var principal = _jwtService.ValidateToken(token);
+            if (principal == null)
+                throw new InvalidOperationException("Token inválido o expirado.");
+
+            var id = principal.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidOperationException("Token inválido.");
+
+            return new { message = "Token válido", id };
         }
 
+        // =========================================================
+        // 🔹 Actualizar contraseña por ID de usuario
+        // =========================================================
         public async Task<object> UpdatePasswordById(string id, string newPassword)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("El ID de usuario es requerido.");
+            if (string.IsNullOrWhiteSpace(newPassword))
+                throw new ArgumentException("La nueva contraseña es requerida.");
+
             var user = await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
-            if (user == null) throw new InvalidOperationException("Usuario no encontrado");
+            if (user == null)
+                throw new InvalidOperationException("Usuario no encontrado.");
 
             var hashed = BCrypt.Net.BCrypt.HashPassword(newPassword);
             var update = Builders<UserModel>.Update.Set(u => u.Password, hashed);
             await _users.UpdateOneAsync(u => u.Id == id, update);
-            return new { message = "Contraseña actualizada exitosamente" };
+
+            return new { message = "Contraseña actualizada exitosamente." };
         }
 
+        // =========================================================
+        // 🔹 Generar token de recuperación (15 min)
+        // =========================================================
         private string GenerateResetToken(string id)
         {
-            var secret = _config["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey no configurada");
-            var issuer = _config["JwtSettings:Issuer"] ?? "RealEstateAPI";
-            var audience = _config["JwtSettings:Audience"] ?? "UsuariosAPI";
+            var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET"))
+                ?? throw new InvalidOperationException("JWT_SECRET no configurada.");
+
+            var issuer = GetEnv("JwtSettings:Issuer", GetEnv("JWT_ISSUER", "RealEstateAPI"));
+            var audience = GetEnv("JwtSettings:Audience", GetEnv("JWT_AUDIENCE", "UsuariosAPI"));
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, id),
-                new Claim(ClaimTypes.NameIdentifier, id)
+                new Claim(ClaimTypes.NameIdentifier, id),
+                new Claim("type", "password-reset")
             };
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
@@ -110,28 +167,8 @@ namespace RealEstate.API.Modules.Password.Service
                 expires: DateTime.UtcNow.AddMinutes(15),
                 signingCredentials: creds
             );
+
             return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private ClaimsPrincipal ValidateToken(string token)
-        {
-            var secret = _config["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey no configurada");
-            var issuer = _config["JwtSettings:Issuer"] ?? "RealEstateAPI";
-            var audience = _config["JwtSettings:Audience"] ?? "UsuariosAPI";
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var parameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-                ValidateIssuer = true,
-                ValidIssuer = issuer,
-                ValidateAudience = true,
-                ValidAudience = audience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
-            return tokenHandler.ValidateToken(token, parameters, out _);
         }
     }
 }

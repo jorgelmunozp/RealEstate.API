@@ -1,3 +1,5 @@
+using RealEstate.API.Modules.PropertyImage.Dto;
+
 namespace RealEstate.API.Modules.Property.Dto
 {
     public class PropertyDto
@@ -9,5 +11,8 @@ namespace RealEstate.API.Modules.Property.Dto
         public int CodeInternal { get; set; }
         public int Year { get; set; }
         public string IdOwner { get; set; } = string.Empty;
+
+        // 🔹 Nueva propiedad para incluir imagen
+        public PropertyImageDto? Image { get; set; }
     }
 }

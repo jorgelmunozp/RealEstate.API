@@ -9,18 +9,18 @@ namespace RealEstate.API.Modules.User.Model
         [BsonRepresentation(BsonType.ObjectId)]
 
         [BsonElement("Id")]
-        public required string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [BsonElement("Name")]
-        public required string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [BsonElement("Email")]
-        public required string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [BsonElement("Password")]
-        public required string Password { get; set; }        // En producción: Hasheado
+        public string Password { get; set; } = string.Empty;      // En producción: Hasheado
 
         [BsonElement("Role")]
-        public required string Role { get; set; }
+        public string Role { get; set; } = string.Empty;
     }
 }
