@@ -16,21 +16,13 @@ namespace RealEstate.API.Modules.Auth.Service
         private readonly UserService _userService;
 
 
-        public AuthService(IConfiguration config, JwtService jwtService, IValidator<LoginDto> validator, UserService userService)
+        public AuthService(IMongoDatabase database, IConfiguration config, JwtService jwtService, IValidator<LoginDto> validator, UserService userService)
         {
             _jwtService = jwtService;
             _validator = validator;
             _userService = userService;
-
-            var mongoConnection = config["MONGO_CONNECTION"] 
-                                  ?? throw new InvalidOperationException("MONGO_CONNECTION no configurado");
-            var mongoDatabase = config["MONGO_DATABASE"] 
-                                ?? throw new InvalidOperationException("MONGO_DATABASE no configurado");
             var mongoCollectionUser = config["MONGO_COLLECTION_USER"] 
                                       ?? throw new InvalidOperationException("MONGO_COLLECTION_USER no configurado");
-
-            var client = new MongoClient(mongoConnection);
-            var database = client.GetDatabase(mongoDatabase);
             _userCollection = database.GetCollection<UserModel>(mongoCollectionUser);
         }
 
@@ -47,13 +39,13 @@ namespace RealEstate.API.Modules.Auth.Service
             var user = await _userCollection.Find(u => u.Email == loginDto.Email).FirstOrDefaultAsync();
             if (user == null)
             {
-                throw new InvalidOperationException("Usuario o  incorrectos");
+                throw new InvalidOperationException("Usuario o contraseña incorrectos");
             }
 
-            // 3️⃣ Verificar contraseña (asumiendo BCrypt)
+            // Verificar contrase�a (BCrypt)
             if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
             {
-                throw new InvalidOperationException(" o contraseña incorrectos");
+                throw new InvalidOperationException("Usuario o contrase�a incorrectos");
             }
 
             // 4️⃣ Generar JWT
@@ -81,14 +73,11 @@ namespace RealEstate.API.Modules.Auth.Service
                 return validation;
             }
 
-            // 2️⃣ Hashear la contraseña antes de crear el usuario
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(userDto.Password);
-            userDto.Password = hashedPassword;
-    
-            // 3️⃣ Crea el usuario usando UserService
+            // Crear usuario usando UserService (hash se aplica en UserService)
             var result = await _userService.CreateAsync(userDto);
 
             return result;
         }
     }
 }
+

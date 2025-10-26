@@ -12,8 +12,8 @@ namespace RealEstate.API.Modules.Auth.Validator
                                             .EmailAddress().WithMessage("El email no tiene un formato válido");
 
             // Password obligatorio y mínimo de 6 caracteres
-            RuleFor(x => x.Password).NotEmpty().WithMessage("La contraseña es obligatoria");
-                                    // .MinimumLength(6).WithMessage("La contraseña debe tener al menos 6 caracteres");
+            RuleFor(x => x.Password).NotEmpty().WithMessage("La contrase�a es obligatoria").MinimumLength(6).WithMessage("La contrase�a debe tener al menos 6 caracteres");
         }
     }
 }
+

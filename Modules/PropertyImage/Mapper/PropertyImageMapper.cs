@@ -9,7 +9,7 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
         // 🔹 Model → DTO
         public static PropertyImageDto ToDto(this PropertyImageModel model) => new()
         {
-            IdPropertyImage = model.IdPropertyImage,
+            IdPropertyImage = model.Id,
             File = model.File,
             Enabled = model.Enabled,
             IdProperty = model.IdProperty
@@ -18,9 +18,9 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
         // 🔹 DTO → Model
         public static PropertyImageModel ToModel(this PropertyImageDto dto) => new()
         {
-            IdPropertyImage = string.IsNullOrEmpty(dto.IdPropertyImage)
-                ? ObjectId.GenerateNewId().ToString() // genera nuevo IdPropertyImage solo si no existe
-                : dto.IdPropertyImage,
+            Id = string.IsNullOrEmpty(dto.IdPropertyImage)
+                ? ObjectId.GenerateNewId().ToString() // genera nuevo Id solo si no existe
+                : dto.IdPropertyImage ?? string.Empty,
             File = dto.File ?? string.Empty,
             Enabled = dto.Enabled,
             IdProperty = dto.IdProperty ?? string.Empty

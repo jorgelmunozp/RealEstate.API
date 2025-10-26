@@ -8,7 +8,7 @@ namespace RealEstate.API.Modules.PropertyImage.Model
         // 🔹 MongoDB _id (interno)
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string IdPropertyImage { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
 
         [BsonElement("File")]
         public string File { get; set; } = string.Empty;

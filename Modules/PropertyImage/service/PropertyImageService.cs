@@ -62,7 +62,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
         // 🔹 Obtener imagen por IdPropertyImage
         public async Task<PropertyImageDto?> GetByIdAsync(string idPropertyImage)
         {
-            var image = await _images.Find(p => p.IdPropertyImage == idPropertyImage).FirstOrDefaultAsync();
+            var image = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
             return image != null ? PropertyImageMapper.ToDto(image) : null;
         }
 
@@ -82,16 +82,18 @@ namespace RealEstate.API.Modules.PropertyImage.Service
 
             var model = image.ToModel();
             await _images.InsertOneAsync(model);
-            return model.IdPropertyImage;
+            return model.Id;
         }
 
         // 🔹 Actualizar imagen (PUT)
         public async Task<ValidationResult> UpdateAsync(string idPropertyImage, PropertyImageDto image)
         {
+            // Asegura que el validador trate esto como actualización
+            image.IdPropertyImage = idPropertyImage;
             var result = await _validator.ValidateAsync(image);
             if (!result.IsValid) return result;
 
-            var existing = await _images.Find(p => p.IdPropertyImage == idPropertyImage).FirstOrDefaultAsync();
+            var existing = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
             if (existing == null)
             {
                 result.Errors.Add(new ValidationFailure("IdPropertyImage", "Imagen de propiedad no encontrada"));
@@ -99,17 +101,19 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             }
 
             var model = image.ToModel();
-            model.IdPropertyImage = idPropertyImage;
+            model.Id = existing.Id;
 
-            await _images.ReplaceOneAsync(p => p.IdPropertyImage == idPropertyImage, model);
+            await _images.ReplaceOneAsync(p => p.Id == existing.Id, model);
             return result;
         }
 
         // 🔹 Actualización parcial (PATCH)
         public async Task<ValidationResult> UpdatePartialAsync(string idPropertyImage, PropertyImageDto image)
         {
+            // Asegura que el validador trate esto como actualización parcial
+            image.IdPropertyImage = idPropertyImage;
             var result = await _validator.ValidateAsync(image);
-            var existing = await _images.Find(p => p.IdPropertyImage == idPropertyImage).FirstOrDefaultAsync();
+            var existing = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
 
             if (existing == null)
             {
@@ -125,14 +129,14 @@ namespace RealEstate.API.Modules.PropertyImage.Service
 
             existing.Enabled = image.Enabled;
 
-            await _images.ReplaceOneAsync(p => p.IdPropertyImage == idPropertyImage, existing);
+            await _images.ReplaceOneAsync(p => p.Id == existing.Id, existing);
             return result;
         }
 
         // 🔹 Eliminar imagen
         public async Task<bool> DeleteAsync(string idPropertyImage)
         {
-            var result = await _images.DeleteOneAsync(p => p.IdPropertyImage == idPropertyImage);
+            var result = await _images.DeleteOneAsync(p => p.Id == idPropertyImage);
             return result.DeletedCount > 0;
         }
     }
