@@ -1,4 +1,4 @@
-# RealEstate.API & RealEstate.App
+# RealEstate.API
 
 ![.NET](https://img.shields.io/badge/.NET-9.0-blue?logo=dotnet)
 ![React](https://img.shields.io/badge/Frontend-React-blue?logo=react)

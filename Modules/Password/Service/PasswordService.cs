@@ -31,7 +31,8 @@ namespace RealEstate.API.Modules.Password.Service
             var token = GenerateResetToken(user.Id);
 
             var frontendUrl = _config["FRONTEND_URL"];
-            var resetLink = $"{frontendUrl.TrimEnd('/')}/password-reset/{token}";
+            var baseUrl = (frontendUrl ?? "http://localhost:3000").TrimEnd('/');
+            var resetLink = $"{baseUrl}/password-reset/{token}";
 
             var smtpHost = _config["SMTP_HOST"];
             var smtpPortStr = _config["SMTP_PORT"] ?? "587";
