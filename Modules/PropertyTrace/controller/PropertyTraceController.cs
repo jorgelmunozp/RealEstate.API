@@ -51,7 +51,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
         // 🔹 PUT api/propertytrace/{id}
         // Reemplaza el registro completo
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyTraceDto trace)
         {
             var result = await _service.UpdateAsync(id, trace);
@@ -68,7 +68,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Controller
 
         // 🔹 PATCH api/propertytrace/{id} - Actualización parcial
         [HttpPatch("{id}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string id, [FromBody] PropertyTraceDto trace)
         {
             var result = await _service.UpdatePartialAsync(id, trace);

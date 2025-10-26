@@ -51,7 +51,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // PUT: api/owner/{id}
         // ===========================================================
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string id, [FromBody] OwnerDto owner)
         {
             var result = await _service.UpdateAsync(id, owner);
@@ -70,7 +70,7 @@ namespace RealEstate.API.Modules.Owner.Controller
         // PATCH: api/owner/{id}
         // ===========================================================
         [HttpPatch("{id}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)

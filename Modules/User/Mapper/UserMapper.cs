@@ -11,7 +11,6 @@ namespace RealEstate.API.Modules.User.Mapper
         {
             Name = model.Name,
             Email = model.Email,
-            Password = model.Password,
             Role = model.Role
         };
 

@@ -65,6 +65,13 @@ namespace RealEstate.API.Modules.Auth.Service
         //********* REGISTRAR USUARIO *********//
         public async Task<ValidationResult> RegisterAsync(UserDto userDto)
         {
+            // Reglas mínimas de seguridad adicionales
+            var prelim = new ValidationResult();
+            if (string.IsNullOrWhiteSpace(userDto.Password))
+            {
+                prelim.Errors.Add(new FluentValidation.Results.ValidationFailure("Password", "La contraseña es obligatoria"));
+                return prelim;
+            }
             // Valida si el usuario ya existe
             var existingUser = await _userService.GetByEmailAsync(userDto.Email);
             if (existingUser != null)

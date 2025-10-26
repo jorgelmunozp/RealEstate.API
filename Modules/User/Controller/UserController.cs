@@ -45,9 +45,20 @@ namespace RealEstate.API.Modules.User.Controller
 
         // PUT: api/user/{email}
         [HttpPut("{email}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string email, [FromBody] UserDto user)
         {
+            // Restringe cambio de Role a admin
+            if (!User.IsInRole("admin"))
+            {
+                var existing = await _service.GetByEmailAsync(email);
+                if (existing == null)
+                    return NotFound(new { Message = "Usuario no encontrado" });
+
+                if (!string.Equals(existing.Role, user.Role, StringComparison.OrdinalIgnoreCase))
+                    return Forbid();
+            }
+
             var result = await _service.UpdateAsync(email, user);
             if (!result.IsValid)
             {
@@ -59,6 +70,25 @@ namespace RealEstate.API.Modules.User.Controller
 
             var updatedUser = await _service.GetByEmailAsync(email);
             return Ok(updatedUser);
+        }
+
+        // PATCH: api/user/{email}
+        [HttpPatch("{email}")]
+        [Authorize(Roles = "editor,admin")]
+        public async Task<IActionResult> Patch(string email, [FromBody] Dictionary<string, object> fields)
+        {
+            if (fields == null || fields.Count == 0)
+                return BadRequest(new { Message = "No se enviaron campos para actualizar" });
+
+            // Restringe cambio de Role a admin
+            if (!User.IsInRole("admin") && fields.Keys.Any(k => string.Equals(k, "role", StringComparison.OrdinalIgnoreCase)))
+                return Forbid();
+
+            var updated = await _service.PatchAsync(email, fields);
+            if (updated == null)
+                return NotFound(new { Message = "Usuario no encontrado" });
+
+            return Ok(updated);
         }
 
         // DELETE: api/user/{email}

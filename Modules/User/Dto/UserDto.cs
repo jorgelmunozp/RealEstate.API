@@ -5,6 +5,6 @@ namespace RealEstate.API.Modules.User.Dto
         public string Name { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Password { get; set; } = null!;
-        public string Role { get; set; } = "User";
+        public string Role { get; set; } = "user";
     }
 }

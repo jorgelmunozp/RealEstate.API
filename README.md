@@ -150,6 +150,8 @@ Acceso por defecto:
 - `PATCH /api/property/{id}`
 - `DELETE /api/property/{id}`
 
+Nota: tambifn existe `PUT /api/property/{id}` (protegido, roles `editor,admin`).
+
 Ejemplo de creación (request):
 
 ```json
@@ -218,6 +220,8 @@ Respuesta (201):
 - `PATCH /api/propertyimage/{idPropertyImage}`
 - `DELETE /api/propertyimage/{idPropertyImage}`
 
+Nota: tambifn existe `PUT /api/propertyimage/{idPropertyImage}` (protegido, roles `editor,admin`).
+
 Ejemplo de creación (request):
 
 ```json
@@ -281,7 +285,17 @@ Respuesta (201):
 - `GET /api/user/{email}?refresh=false` (protegido)
 - `POST /api/user`
 - `PUT /api/user/{email}` (protegido)
+- `PATCH /api/user/{email}` (protegido)
 - `DELETE /api/user/{email}` (protegido)
+
+Ejemplo de actualizacion parcial (PATCH):
+
+```json
+{
+  "name": "Jane Doe",
+  "role": "editor"
+}
+```
 
 Ejemplo de registro (request):
 
@@ -369,7 +383,103 @@ Recomendaciones de TTL:
 
 ---
 
+## Autorizacion y Roles
+
+Para endpoints protegidos enviar siempre el header `Authorization: Bearer <TOKEN>`.
+
+Roles disponibles: `user`, `editor`, `admin`.
+
+| Operacion | Requisito |
+|-----------|-----------|
+| GET | Publico, excepto `GET /api/user...` (requiere token) |
+| POST | Autenticado (cualquier rol) |
+| PUT | Roles `editor,admin` |
+| PATCH | Roles `editor,admin` |
+| DELETE | Rol `admin` |
+
+Notas:
+- El claim de rol usa `ClaimTypes.Role` dentro del JWT.
+- Las reglas aplican a todos los modulos salvo donde se indique explicitamente lo contrario.
+
+---
+
 ## Pruebas
 
 - Stack sugerido: `NUnit + Moq + FluentAssertions`.
 - Cobertura recomendada: CRUD, validación, seguridad (JWT) y cache (hits/misses y refresh).
+
+---
+
+## Password
+
+- `POST /api/password/recover` (anónimo)
+  - Body: `{ "email": "user@example.com" }`
+  - Envía email con enlace de recuperación si SMTP está configurado. Siempre responde 200 en dev.
+- `GET /api/password/reset/{token}` (anónimo)
+  - Verifica token y devuelve `{ message, id }` si es válido.
+- `PATCH /api/password/update` (anónimo)
+  - Body: `{ "token": "<JWT>", "newPassword": "Secret123!" }`
+  - Actualiza password del usuario (hash con BCrypt). Token válido 15 min.
+
+SMTP opcional (para envío de correo):
+
+```dotenv
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=no-reply@example.com
+SMTP_PASS=xxxxxxxxxxxxx
+```
+
+---
+
+## Base de Datos (MongoDB)
+
+Conexión y configuración
+
+- La API usa MongoDB vía `MongoDB.Driver` con estas variables:
+  - `MONGO_CONNECTION` (p. ej. `mongodb://localhost:27017` o SRV)
+  - `MONGO_DATABASE` (p. ej. `RealEstate`)
+  - Colecciones por módulo:
+    - `MONGO_COLLECTION_PROPERTY`
+    - `MONGO_COLLECTION_OWNER`
+    - `MONGO_COLLECTION_PROPERTYIMAGE`
+    - `MONGO_COLLECTION_PROPERTYTRACE`
+    - `MONGO_COLLECTION_USER`
+- El arranque registra:
+  - `IMongoClient` como singleton con `MONGO_CONNECTION`.
+  - `IMongoDatabase` como singleton con `MONGO_DATABASE`.
+- Cada servicio resuelve su colección leyendo el nombre desde `IConfiguration`.
+  - Ejemplo: `OwnerService` usa `MONGO_COLLECTION_OWNER`; `UserService` usa `MONGO_COLLECTION_USER`.
+
+Modelo de datos
+
+- Identificadores: las entidades usan `string` para `Id`, mapeado a `ObjectId` con atributos BSON.
+- Convenciones BSON: se usan `[BsonId]`, `[BsonRepresentation(BsonType.ObjectId)]` y `[BsonElement("...")]` para mantener nombres coherentes entre C# y MongoDB.
+
+Buenas prácticas e índices recomendados
+
+- Unicidad de usuarios: índice único en `Email` de la colección de usuarios.
+- Búsquedas comunes: índices en campos filtrables (p. ej., `Property.idOwner`, `Property.price`, `Owner.name`).
+- Ejemplo (Mongo Shell):
+  - `db.user.createIndex({ Email: 1 }, { unique: true })`
+  - `db.property.createIndex({ idOwner: 1 })`
+  - `db.property.createIndex({ price: 1 })`
+
+Ejemplos de cadena de conexión
+
+```bash
+# Local sin autenticación
+MONGO_CONNECTION=mongodb://localhost:27017
+
+# Autenticación usuario/clave (base admin) + opciones de pool/timeout
+# SRV (Atlas) con TLS implícito
+MONGO_CONNECTION=mongodb+srv://app_user:StrongPass@cluster0.xxxxx.mongodb.net
+```
+
+Notas operativas
+
+- Caché en memoria: las lecturas se almacenan con TTL configurable (`CACHE_TTL_MINUTES`).
+  - Los servicios invalidan la caché correspondiente en operaciones de escritura.
+  - El parámetro `refresh=true` fuerza omitir la caché en lecturas.
+- Seguridad: no exponer credenciales en el repositorio; usar variables de entorno o secretos del entorno.
+- TLS/SSL: SRV (Atlas) ya usa TLS; para `mongodb://` on-prem, habilitar TLS según tu despliegue.

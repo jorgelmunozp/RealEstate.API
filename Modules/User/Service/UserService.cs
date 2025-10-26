@@ -5,6 +5,8 @@ using MongoDB.Driver;
 using RealEstate.API.Modules.User.Dto;
 using RealEstate.API.Modules.User.Model;
 using RealEstate.API.Modules.User.Mapper;
+using MongoDB.Bson;
+using System.Reflection;
 
 namespace RealEstate.API.Modules.User.Service
 {
@@ -63,8 +65,18 @@ namespace RealEstate.API.Modules.User.Service
             var result = await _validator.ValidateAsync(user);
             if (!result.IsValid) return result;
 
+            // Hash de contraseña antes de persistir
+            if (!string.IsNullOrWhiteSpace(user.Password))
+            {
+                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+            }
+
             var model = user.ToModel();
             await _users.InsertOneAsync(model);
+
+            // Invalida cache relevante
+            _cache.Remove("user:all");
+            _cache.Remove($"user:email:{user.Email}");
             return result;
         }
 
@@ -74,11 +86,39 @@ namespace RealEstate.API.Modules.User.Service
             var result = await _validator.ValidateAsync(user);
             if (!result.IsValid) return result;
 
-            var model = user.ToModel();
-            var updateResult = await _users.ReplaceOneAsync(u => u.Email == email, model);
-
-            if (updateResult.MatchedCount == 0)
+            var existing = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+            if (existing == null)
+            {
                 result.Errors.Add(new ValidationFailure("Email", "Usuario no encontrado"));
+                return result;
+            }
+
+            // Verificar unicidad si cambia el email
+            if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailTaken = await _users.Find(u => u.Email == user.Email).AnyAsync();
+                if (emailTaken)
+                {
+                    result.Errors.Add(new ValidationFailure("Email", "El email ya está registrado"));
+                    return result;
+                }
+            }
+
+            // Hash de contraseña si viene informada
+            if (!string.IsNullOrWhiteSpace(user.Password))
+            {
+                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+            }
+
+            var model = user.ToModel();
+            model.Id = existing.Id; // preservar Id
+
+            var updateResult = await _users.ReplaceOneAsync(u => u.Id == existing.Id, model);
+
+            // Invalida cache relevante
+            _cache.Remove("user:all");
+            _cache.Remove($"user:email:{email}");
+            _cache.Remove($"user:email:{user.Email}");
 
             return result;
         }
@@ -87,7 +127,87 @@ namespace RealEstate.API.Modules.User.Service
         public async Task<bool> DeleteAsync(string email)
         {
             var result = await _users.DeleteOneAsync(u => u.Email == email);
-            return result.DeletedCount > 0;
+            var ok = result.DeletedCount > 0;
+            if (ok)
+            {
+                _cache.Remove("user:all");
+                _cache.Remove($"user:email:{email}");
+            }
+            return ok;
+        }
+
+        // PATCH parcial (solo campos enviados)
+        public async Task<UserDto?> PatchAsync(string email, Dictionary<string, object> fields)
+        {
+            if (fields == null || fields.Count == 0) return null;
+
+            var existing = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+            if (existing == null) return null;
+
+            var updates = new List<UpdateDefinition<UserModel>>();
+            var builder = Builders<UserModel>.Update;
+
+            // Lista blanca de campos permitidos
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Name", "Email", "Password", "Role" };
+
+            string? newEmail = null;
+
+            foreach (var field in fields)
+            {
+                if (string.IsNullOrWhiteSpace(field.Key)) continue;
+                if (!allowed.Contains(field.Key)) continue; // ignora campos no permitidos (ej: Id)
+
+                var keyNorm = typeof(UserModel).GetProperty(field.Key, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance)?.Name;
+                if (string.IsNullOrEmpty(keyNorm)) continue;
+
+                if (string.Equals(keyNorm, nameof(UserModel.Password), StringComparison.Ordinal))
+                {
+                    if (field.Value is string pwd && !string.IsNullOrWhiteSpace(pwd))
+                    {
+                        var hash = BCrypt.Net.BCrypt.HashPassword(pwd);
+                        updates.Add(builder.Set(nameof(UserModel.Password), BsonValue.Create(hash)));
+                    }
+                    continue;
+                }
+
+                if (string.Equals(keyNorm, nameof(UserModel.Email), StringComparison.Ordinal))
+                {
+                    if (field.Value is string emailNew && !string.IsNullOrWhiteSpace(emailNew))
+                    {
+                        newEmail = emailNew;
+                        // Unicidad del email
+                        if (!string.Equals(existing.Email, emailNew, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var taken = await _users.Find(u => u.Email == emailNew).AnyAsync();
+                            if (taken)
+                            {
+                                throw new FluentValidation.ValidationException(new[] {
+                                    new FluentValidation.Results.ValidationFailure("Email", "El email ya está registrado")
+                                });
+                            }
+                        }
+                        updates.Add(builder.Set(nameof(UserModel.Email), BsonValue.Create(emailNew)));
+                    }
+                    continue;
+                }
+
+                updates.Add(builder.Set(keyNorm, BsonValue.Create(field.Value)));
+            }
+
+            if (!updates.Any()) return null;
+
+            var update = builder.Combine(updates);
+            await _users.UpdateOneAsync(u => u.Id == existing.Id, update);
+
+            // Invalida cache relevante
+            _cache.Remove("user:all");
+            _cache.Remove($"user:email:{existing.Email}");
+            if (!string.IsNullOrWhiteSpace(newEmail))
+                _cache.Remove($"user:email:{newEmail}");
+
+            var updated = await _users.Find(u => u.Id == existing.Id).FirstOrDefaultAsync();
+            return updated?.ToDto();
         }
     }
 }

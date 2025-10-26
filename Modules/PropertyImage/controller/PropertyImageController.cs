@@ -62,7 +62,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 PUT: api/propertyimage/{idPropertyImage}
         [HttpPut("{idPropertyImage}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
             var result = await _service.UpdateAsync(idPropertyImage, image);
@@ -80,7 +80,7 @@ namespace RealEstate.API.Modules.PropertyImage.Controller
 
         // 🔹 PATCH: api/propertyimage/{idPropertyImage}
         [HttpPatch("{idPropertyImage}")]
-        [Authorize]
+        [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string idPropertyImage, [FromBody] PropertyImageDto image)
         {
             var result = await _service.UpdatePartialAsync(idPropertyImage, image);
