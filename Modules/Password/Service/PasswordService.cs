@@ -2,6 +2,7 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using RealEstate.API.Modules.User.Model;
 using RealEstate.API.Modules.Token.Service;
+using RealEstate.API.Modules.User.Service;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Mail;
@@ -16,7 +17,7 @@ namespace RealEstate.API.Modules.Password.Service
         private readonly IConfiguration _config;
         private readonly JwtService _jwtService;
 
-        public PasswordService(IMongoDatabase database, IConfiguration config)
+        public PasswordService(IMongoDatabase database, IConfiguration config, UserService userService)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
 
@@ -25,12 +26,9 @@ namespace RealEstate.API.Modules.Password.Service
                 throw new Exception("MONGO_COLLECTION_USER no definida");
 
             _users = database.GetCollection<UserModel>(collection);
-            _jwtService = new JwtService(config);
+            _jwtService = new JwtService(config, userService);
         }
 
-        // =========================================================
-        // 🔹 Helper: Obtener variable desde entorno o IConfiguration
-        // =========================================================
         private string? GetEnv(string key, string? fallback = null)
         {
             var fromConfig = _config[key];
@@ -40,9 +38,6 @@ namespace RealEstate.API.Modules.Password.Service
             return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : fallback;
         }
 
-        // =========================================================
-        // 🔹 Enviar correo de recuperación
-        // =========================================================
         public async Task<object> SendPasswordRecoveryEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email))
@@ -52,21 +47,18 @@ namespace RealEstate.API.Modules.Password.Service
             if (user == null)
                 throw new InvalidOperationException($"No existe usuario con el email {email}");
 
-            // ✅ Generar token de recuperación usando JwtService
             var token = GenerateResetToken(user.Id);
 
             var frontendUrl = GetEnv("FRONTEND_URL", "http://localhost:3000");
             var baseUrl = frontendUrl.TrimEnd('/');
             var resetLink = $"{baseUrl}/password-reset/{token}";
 
-            // 📧 SMTP settings
             var smtpHost = GetEnv("SMTP_HOST", "smtp.gmail.com");
             var smtpPortStr = GetEnv("SMTP_PORT", "587");
             var smtpUser = GetEnv("SMTP_USER");
             var smtpPass = GetEnv("SMTP_PASS");
 
             if (!int.TryParse(smtpPortStr, out var smtpPort)) smtpPort = 587;
-
             if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpUser) || string.IsNullOrWhiteSpace(smtpPass))
                 throw new InvalidOperationException("Configuración SMTP incompleta.");
 
@@ -97,9 +89,6 @@ namespace RealEstate.API.Modules.Password.Service
             return new { message = $"Enlace de recuperación enviado al correo {email}" };
         }
 
-        // =========================================================
-        // 🔹 Verificar token de recuperación
-        // =========================================================
         public object VerifyResetToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -118,9 +107,6 @@ namespace RealEstate.API.Modules.Password.Service
             return new { message = "Token válido", id };
         }
 
-        // =========================================================
-        // 🔹 Actualizar contraseña por ID de usuario
-        // =========================================================
         public async Task<object> UpdatePasswordById(string id, string newPassword)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -139,9 +125,6 @@ namespace RealEstate.API.Modules.Password.Service
             return new { message = "Contraseña actualizada exitosamente." };
         }
 
-        // =========================================================
-        // 🔹 Generar token de recuperación (15 min)
-        // =========================================================
         private string GenerateResetToken(string id)
         {
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET"))

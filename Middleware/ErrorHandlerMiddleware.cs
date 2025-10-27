@@ -1,10 +1,15 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using RealEstate.API.Infraestructure.Core.Logs; // Donde está tu ServiceLogResponseWrapper
+using RealEstate.API.Infraestructure.Core.Services;
 
 namespace RealEstate.API.Middleware
 {
+    
+    /// Middleware global de manejo de errores.
+    /// Captura excepciones no controladas, las registra en consola y logs estructurados,
+    /// y devuelve una respuesta JSON unificada con el formato del ServiceResultWrapper.
+    /// </summary>
     public class ErrorHandlerMiddleware
     {
         private readonly RequestDelegate _next;
@@ -30,8 +35,10 @@ namespace RealEstate.API.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
-            // 🔹 Determinar tipo de error → status code adecuado
-            HttpStatusCode statusCode = ex switch
+            // ------------------------------------------------------------
+            // Determinar el tipo de excepción → código HTTP adecuado
+            // ------------------------------------------------------------
+            var statusCode = ex switch
             {
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,
                 KeyNotFoundException => HttpStatusCode.NotFound,
@@ -40,17 +47,30 @@ namespace RealEstate.API.Middleware
                 _ => HttpStatusCode.InternalServerError
             };
 
-            // 🔹 Registrar error en logs
-            _logger.LogError(ex, "❌ Error capturado en middleware global: {Message}", ex.Message);
+            // ------------------------------------------------------------
+            // Consola: formato [HALL] consistente con LoggingMiddleware
+            // ------------------------------------------------------------
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("[HALL] ");
+            Console.ResetColor();
+            Console.WriteLine($"❌ Error global capturado: {ex.GetType().Name}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"Mensaje: {ex.Message}");
+            Console.WriteLine($"Ruta: {context.Request.Method} {context.Request.Path}");
+            if (ex.StackTrace != null)
+                Console.WriteLine($"StackTrace:\n{ex.StackTrace}");
+            Console.ResetColor();
 
-            // 🔹 Armar respuesta unificada
-            var response = ServiceLogResponseWrapper<string>.Fail(
-                message: "Ocurrió un error al procesar la solicitud",
-                errors: new[] { ex.Message },
-                statusCode: (int)statusCode
-            );
+            // ------------------------------------------------------------
+            // Log estructurado con ILogger
+            // ------------------------------------------------------------
+            _logger.LogError(ex, "❌ Error global: {Message}", ex.Message);
 
-            // 🔹 Configurar headers y serializar JSON
+            // ------------------------------------------------------------
+            // Construir respuesta JSON uniforme
+            // ------------------------------------------------------------
+            var response = ServiceResultWrapper<string>.Error(ex, (int)statusCode);
+
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)statusCode;
 
@@ -63,6 +83,17 @@ namespace RealEstate.API.Middleware
 
             var json = JsonSerializer.Serialize(response, jsonOptions);
             await context.Response.WriteAsync(json);
+
+            // ------------------------------------------------------------
+            // Log resumen final del pipeline
+            // ------------------------------------------------------------
+            _logger.LogInformation(
+                "[HALL] ErrorHandler => {StatusCode} {Method} {Path} ({ExceptionType})",
+                (int)statusCode,
+                context.Request.Method,
+                context.Request.Path,
+                ex.GetType().Name
+            );
         }
     }
 }

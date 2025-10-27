@@ -6,40 +6,49 @@ namespace RealEstate.API.Modules.User.Mapper
 {
     public static class UserMapper
     {
-        // Model → DTO
-        public static UserDto ToDto(this UserModel model) => new()
+        // ===========================================================
+        // 🔹 Model → DTO
+        // ===========================================================
+        public static UserDto ToDto(this UserModel model)
         {
-            Name = model.Name,
-            Email = model.Email,
-            Role = model.Role
-        };
+            if (model == null) return new UserDto();
 
-        // Convierte una lista de modelos en una lista de DTOs
-        public static List<UserDto> ToDtoList(IEnumerable<UserModel> models)
-        {
-            if (models == null || !models.Any())
-                return new List<UserDto>();
-
-            return models.Select(m => ToDto(m)).ToList();
+            return new UserDto
+            {
+                Id = model.Id,
+                Name = model.Name,
+                Email = model.Email,
+                // ⚠️ No exponer contraseñas en respuestas API
+                Password = string.Empty,
+                Role = model.Role
+            };
         }
 
-        // DTO → Model
-        public static UserModel ToModel(this UserDto dto) => new()
-        {
-            Id = ObjectId.GenerateNewId().ToString(),
-            Name = dto.Name,
-            Email = dto.Email,
-            Password = dto.Password,
-            Role = dto.Role
-        };
+        public static List<UserDto> ToDtoList(IEnumerable<UserModel>? models) =>
+            models?.Select(m => m.ToDto()).ToList() ?? new List<UserDto>();
 
-        // Convierte una lista de DTOs en una lista de modelos
-        public static List<UserModel> ToModelList(IEnumerable<UserDto> dtos)
+        // ===========================================================
+        // 🔹 DTO → Model
+        // ===========================================================
+        public static UserModel ToModel(this UserDto dto)
         {
-            if (dtos == null || !dtos.Any())
-                return new List<UserModel>();
+            if (dto == null) return new UserModel();
 
-            return dtos.Select(d => ToModel(d)).ToList();
+            return new UserModel
+            {
+                Id = string.IsNullOrWhiteSpace(dto.Id)
+                    ? ObjectId.GenerateNewId().ToString()
+                    : dto.Id,
+                Name = dto.Name,
+                Email = dto.Email,
+                // ⚙️ Si el servicio ya encripta, aquí se pasa plano
+                Password = dto.Password ?? string.Empty,
+                Role = dto.Role ?? "user",
+                CreatedAt = DateTime.UtcNow
+            };
         }
+
+        public static List<UserModel> ToModelList(IEnumerable<UserDto>? dtos) =>
+            dtos?.Select(d => d.ToModel()).ToList() ?? new List<UserModel>();
     }
 }

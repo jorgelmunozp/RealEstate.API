@@ -1,10 +1,10 @@
+using AutoMapper;
 using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Driver;
+using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Model;
-using RealEstate.API.Modules.PropertyTrace.Mapper;
 
 namespace RealEstate.API.Modules.PropertyTrace.Service
 {
@@ -13,13 +13,10 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
         private readonly IMongoCollection<PropertyTraceModel> _traces;
         private readonly IValidator<PropertyTraceDto> _validator;
         private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
         private readonly TimeSpan _cacheTtl;
 
-        public PropertyTraceService(
-            IMongoDatabase database,
-            IValidator<PropertyTraceDto> validator,
-            IConfiguration config,
-            IMemoryCache cache)
+        public PropertyTraceService(IMongoDatabase database, IValidator<PropertyTraceDto> validator, IConfiguration config, IMemoryCache cache, IMapper mapper)
         {
             var collection = config["MONGO_COLLECTION_PROPERTYTRACE"]
                 ?? throw new Exception("MONGO_COLLECTION_PROPERTYTRACE no definida");
@@ -27,112 +24,148 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             _traces = database.GetCollection<PropertyTraceModel>(collection);
             _validator = validator;
             _cache = cache;
+            _mapper = mapper;
+
             var ttlStr = config["CACHE_TTL_MINUTES"];
-            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0) ? TimeSpan.FromMinutes(m) : TimeSpan.FromMinutes(5);
+            _cacheTtl = int.TryParse(ttlStr, out var m) && m > 0
+                ? TimeSpan.FromMinutes(m)
+                : TimeSpan.FromMinutes(5);
         }
 
-        // 🔹 Obtener todas las trazas
-        public async Task<List<PropertyTraceDto>> GetAllAsync(string? idProperty = null, bool refresh = false)
+        // ===========================================================
+        // GET ALL (con filtro opcional por propiedad y caché)
+        // ===========================================================
+        public async Task<ServiceResultWrapper<IEnumerable<PropertyTraceDto>>> GetAllAsync(string? idProperty = null, bool refresh = false)
         {
-            var key = $"ptrace:{idProperty ?? "all"}";
-            if (!refresh)
-            {
-                var cached = _cache.Get<List<PropertyTraceDto>>(key);
-                if (cached != null) return cached;
-            }
+            var cacheKey = $"ptrace:{idProperty ?? "all"}";
+            if (!refresh && _cache.TryGetValue(cacheKey, out IEnumerable<PropertyTraceDto>? cached))
+                return ServiceResultWrapper<IEnumerable<PropertyTraceDto>>.Ok(cached, "Trazas obtenidas desde caché");
 
-            var filter = Builders<PropertyTraceModel>.Filter.Empty;
-
-            if (!string.IsNullOrEmpty(idProperty))
-                filter &= Builders<PropertyTraceModel>.Filter.Eq(t => t.IdProperty, idProperty);
+            var filter = string.IsNullOrWhiteSpace(idProperty)
+                ? Builders<PropertyTraceModel>.Filter.Empty
+                : Builders<PropertyTraceModel>.Filter.Eq(t => t.IdProperty, idProperty);
 
             var traces = await _traces.Find(filter).ToListAsync();
-            var result = traces.Select(PropertyTraceMapper.ToDto).ToList();
-            _cache.Set(key, result, _cacheTtl);
-            return result;
+            var result = _mapper.Map<IEnumerable<PropertyTraceDto>>(traces);
+
+            _cache.Set(cacheKey, result, _cacheTtl);
+            return ServiceResultWrapper<IEnumerable<PropertyTraceDto>>.Ok(result, "Listado de trazas obtenido correctamente");
         }
 
-        // 🔹 Obtener una traza por ID
-        public async Task<PropertyTraceDto?> GetByIdAsync(string id)
+        // ===========================================================
+        // GET BY ID
+        // ===========================================================
+        public async Task<ServiceResultWrapper<PropertyTraceDto>> GetByIdAsync(string id)
         {
-            var trace = await _traces.Find(p => p.Id == id).FirstOrDefaultAsync();
-            return trace != null ? PropertyTraceMapper.ToDto(trace) : null;
+            var trace = await _traces.Find(t => t.Id == id).FirstOrDefaultAsync();
+            if (trace == null)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail("Traza no encontrada", 404);
+
+            return ServiceResultWrapper<PropertyTraceDto>.Ok(_mapper.Map<PropertyTraceDto>(trace), "Traza obtenida correctamente");
         }
 
-        // 🔹 Crear una o varias trazas
-        public async Task<List<string>> CreateAsync(IEnumerable<PropertyTraceDto> traces)
+        // ===========================================================
+        // CREATE (una o varias trazas)
+        // ===========================================================
+        public async Task<ServiceResultWrapper<List<string>>> CreateAsync(IEnumerable<PropertyTraceDto> traces)
         {
             var ids = new List<string>();
-            var allErrors = new List<ValidationFailure>();
+            var errors = new List<string>();
 
-            foreach (var trace in traces)
+            foreach (var dto in traces)
             {
-                var result = await _validator.ValidateAsync(trace);
-                if (!result.IsValid)
+                var validation = await _validator.ValidateAsync(dto);
+                if (!validation.IsValid)
                 {
-                    allErrors.AddRange(result.Errors);
+                    errors.AddRange(validation.Errors.Select(e => e.ErrorMessage));
                     continue;
                 }
 
-                var model = trace.ToModel();
+                var model = _mapper.Map<PropertyTraceModel>(dto);
                 await _traces.InsertOneAsync(model);
                 ids.Add(model.Id);
             }
 
-            if (allErrors.Any())
-                throw new ValidationException(allErrors);
+            if (errors.Any())
+                return ServiceResultWrapper<List<string>>.Fail(errors, 400, "Algunas trazas no fueron válidas");
 
-            return ids;
+            return ServiceResultWrapper<List<string>>.Created(ids, "Trazas creadas correctamente");
         }
 
-        // 🔹 Reemplazo completo (PUT)
-        public async Task<ValidationResult> UpdateAsync(string id, PropertyTraceDto trace)
+        // ===========================================================
+        // CREATE (una sola traza)
+        // ===========================================================
+        public async Task<ServiceResultWrapper<PropertyTraceDto>> CreateSingleAsync(PropertyTraceDto trace)
         {
-            var result = await _validator.ValidateAsync(trace);
-            if (!result.IsValid) return result;
+            var validation = await _validator.ValidateAsync(trace);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
 
-            var existing = await _traces.Find(p => p.Id == id).FirstOrDefaultAsync();
+            var model = _mapper.Map<PropertyTraceModel>(trace);
+            await _traces.InsertOneAsync(model);
+
+            return ServiceResultWrapper<PropertyTraceDto>.Created(_mapper.Map<PropertyTraceDto>(model), "Traza creada correctamente");
+        }
+
+        // ===========================================================
+        // UPDATE (PUT)
+        // ===========================================================
+        public async Task<ServiceResultWrapper<PropertyTraceDto>> UpdateAsync(string id, PropertyTraceDto trace)
+        {
+            var validation = await _validator.ValidateAsync(trace);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
+
+            var existing = await _traces.Find(t => t.Id == id).FirstOrDefaultAsync();
             if (existing == null)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail("Traza no encontrada", 404);
+
+            var updatedModel = _mapper.Map(trace, existing);
+            await _traces.ReplaceOneAsync(t => t.Id == id, updatedModel);
+
+            return ServiceResultWrapper<PropertyTraceDto>.Updated(_mapper.Map<PropertyTraceDto>(updatedModel), "Traza actualizada correctamente");
+        }
+
+        // ===========================================================
+        // PATCH (actualización parcial)
+        // ===========================================================
+        public async Task<ServiceResultWrapper<PropertyTraceDto>> PatchAsync(string id, Dictionary<string, object> fields)
+        {
+            if (fields == null || fields.Count == 0)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail("No se enviaron campos para actualizar", 400);
+
+            var existing = await _traces.Find(t => t.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return ServiceResultWrapper<PropertyTraceDto>.Fail("Traza no encontrada", 404);
+
+            var updates = new List<UpdateDefinition<PropertyTraceModel>>();
+            var builder = Builders<PropertyTraceModel>.Update;
+
+            foreach (var field in fields)
             {
-                result.Errors.Add(new ValidationFailure("Id", "Registro de propiedad no encontrado"));
-                return result;
+                if (!string.IsNullOrWhiteSpace(field.Key))
+                    updates.Add(builder.Set(field.Key, field.Value));
             }
 
-            var model = trace.ToModel();
-            model.Id = id; // conservar ID original
+            if (!updates.Any())
+                return ServiceResultWrapper<PropertyTraceDto>.Fail("No se enviaron campos válidos", 400);
 
-            await _traces.ReplaceOneAsync(p => p.Id == id, model);
-            return result;
+            await _traces.UpdateOneAsync(t => t.Id == id, builder.Combine(updates));
+
+            var updated = await _traces.Find(t => t.Id == id).FirstOrDefaultAsync();
+            return ServiceResultWrapper<PropertyTraceDto>.Updated(_mapper.Map<PropertyTraceDto>(updated), "Traza actualizada parcialmente");
         }
 
-        // 🔹 Actualización parcial (PATCH)
-        public async Task<ValidationResult> UpdatePartialAsync(string id, PropertyTraceDto trace)
+        // ===========================================================
+        // DELETE
+        // ===========================================================
+        public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
-            var existing = await _traces.Find(p => p.Id == id).FirstOrDefaultAsync();
-            var result = await _validator.ValidateAsync(trace);
+            var result = await _traces.DeleteOneAsync(t => t.Id == id);
+            if (result.DeletedCount == 0)
+                return ServiceResultWrapper<bool>.Fail("Traza no encontrada", 404);
 
-            if (existing == null)
-            {
-                result.Errors.Add(new ValidationFailure("Id", "Registro no encontrado"));
-                return result;
-            }
-
-            // Solo reemplazar campos no nulos ni vacíos
-            if (!string.IsNullOrEmpty(trace.Name)) existing.Name = trace.Name;
-            if (trace.Value != 0) existing.Value = trace.Value;
-            if (trace.Tax != 0) existing.Tax = trace.Tax;
-            if (!string.IsNullOrEmpty(trace.DateSale)) existing.DateSale = trace.DateSale;
-            if (!string.IsNullOrEmpty(trace.IdProperty)) existing.IdProperty = trace.IdProperty;
-
-            await _traces.ReplaceOneAsync(p => p.Id == id, existing);
-            return result;
-        }
-
-        // 🔹 Eliminar una traza
-        public async Task<bool> DeleteAsync(string id)
-        {
-            var result = await _traces.DeleteOneAsync(p => p.Id == id);
-            return result.DeletedCount > 0;
+            return ServiceResultWrapper<bool>.Deleted("Traza eliminada correctamente");
         }
     }
 }

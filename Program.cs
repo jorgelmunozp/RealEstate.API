@@ -8,70 +8,66 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
 
+// Core
 using RealEstate.API.Middleware;
 using RealEstate.API.Mappings;
+using RealEstate.API.Infraestructure.Core.Services;
 
-// Token
+// Token / Auth / Password
 using RealEstate.API.Modules.Token.Service;
-
-// Auth
 using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.Auth.Validator;
 using RealEstate.API.Modules.Auth.Service;
+using RealEstate.API.Modules.Password.Service;
 
 // User
 using RealEstate.API.Modules.User.Dto;
 using RealEstate.API.Modules.User.Validator;
 using RealEstate.API.Modules.User.Service;
 
-// Property
+// Property / Owner / Image / Trace
 using RealEstate.API.Modules.Property.Dto;
 using RealEstate.API.Modules.Property.Validator;
 using RealEstate.API.Modules.Property.Service;
-
-// Owner
 using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.Owner.Validator;
 using RealEstate.API.Modules.Owner.Service;
-
-// PropertyImage
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Validator;
 using RealEstate.API.Modules.PropertyImage.Service;
-
-// PropertyTrace
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Validator;
 using RealEstate.API.Modules.PropertyTrace.Service;
 
-// Password
-using RealEstate.API.Modules.Password.Service;
-
+// ===========================================================
+// 🔹 CONFIGURACIÓN BASE
+// ===========================================================
 DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 var config = builder.Configuration;
 
-// ==========================================
-// 🔹 CONFIGURACIÓN DE MONGODB
-// ==========================================
-var mongoConnectionString = config["MONGO_CONNECTION"] ?? "mongodb://localhost:27017";
-var mongoDbName = config["MONGO_DATABASE"] ?? "RealEstate";
+// ===========================================================
+// 🔹 MONGODB
+// ===========================================================
+var mongoConnection = config["MONGO_CONNECTION"] ?? "mongodb://localhost:27017";
+var mongoDatabase = config["MONGO_DATABASE"] ?? "RealEstate";
 
-if (string.IsNullOrWhiteSpace(mongoConnectionString))
-    throw new InvalidOperationException("La variable de entorno MONGO_CONNECTION no puede ser nula o vacía.");
-if (string.IsNullOrWhiteSpace(mongoDbName))
-    throw new InvalidOperationException("La variable de entorno MONGO_DATABASE no puede ser nula o vacía.");
+if (string.IsNullOrWhiteSpace(mongoConnection))
+    throw new InvalidOperationException("La variable MONGO_CONNECTION no puede ser nula o vacía.");
+if (string.IsNullOrWhiteSpace(mongoDatabase))
+    throw new InvalidOperationException("La variable MONGO_DATABASE no puede ser nula o vacía.");
 
-Console.WriteLine($"MongoDB Connection: {mongoConnectionString}");
-Console.WriteLine($"MongoDB Database: {mongoDbName}");
+Console.WriteLine($"[MongoDB] Conexión: {mongoConnection}");
+Console.WriteLine($"[MongoDB] Base de datos: {mongoDatabase}");
 
-builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnectionString));
-builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName));
+builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDatabase));
 
-// ==========================================
-// 🔹 JSON (camelCase global)
-// ==========================================
+// ===========================================================
+// 🔹 JSON GLOBAL (camelCase + case-insensitive)
+// ===========================================================
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
@@ -80,13 +76,13 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
-// ==========================================
-// 🔹 JWT DESDE VARIABLES DE ENTORNO
-// ==========================================
-var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("La variable JWT_SECRET no está definida");
+// ===========================================================
+// 🔹 JWT CONFIG (desde entorno)
+// ===========================================================
+var secretKey = config["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET no está definida");
 var issuer = config["JWT_ISSUER"] ?? "RealEstateAPI";
 var audience = config["JWT_AUDIENCE"] ?? "UsuariosAPI";
-var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? config["JWT_EXPIRY"] ?? "60";
+var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? "60";
 var refreshDays = config["JWT_REFRESH_DAYS"] ?? "7";
 
 builder.Configuration["JwtSettings:SecretKey"] = secretKey;
@@ -95,99 +91,102 @@ builder.Configuration["JwtSettings:Audience"] = audience;
 builder.Configuration["JwtSettings:ExpiryMinutes"] = expiryMinutes;
 builder.Configuration["JwtSettings:RefreshDays"] = refreshDays;
 
-// ==========================================
-// 🔹 VALIDACIÓN GLOBAL Y FLUENTVALIDATION
-// ==========================================
+// ===========================================================
+// 🔹 VALIDACIÓN GLOBAL (FluentValidation + Wrapper uniforme)
+// ===========================================================
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped);
 
-// Forzar nombres de propiedad en validaciones a camelCase (afecta claves en ModelState)
-FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expression) =>
+// Nombres de propiedades camelCase en validaciones
+FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expr) =>
 {
-    string? name = member?.Name;
-    if (string.IsNullOrEmpty(name) && expression != null)
-    {
-        var exprStr = expression.ToString();
-        var last = exprStr.Split('.').LastOrDefault();
-        name = last;
-    }
-    return string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
+    var name = member?.Name ?? expr?.ToString()?.Split('.').LastOrDefault();
+    return string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
 };
 
-builder.Services.Configure<ApiBehaviorOptions>(o =>
+// Respuesta uniforme para errores de validación
+builder.Services.Configure<ApiBehaviorOptions>(opt =>
 {
-    o.InvalidModelStateResponseFactory = ctx =>
+    opt.InvalidModelStateResponseFactory = ctx =>
     {
         var errors = ctx.ModelState
-                    .Where(x => x.Value != null && x.Value.Errors.Count > 0)
-                    .SelectMany(v => v.Value!.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToArray();
+            .Where(x => x.Value?.Errors.Count > 0)
+            .SelectMany(v => v.Value!.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToArray();
 
-        var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<object>.Fail(
-            message: "Errores de validación",
-            errors: errors,
-            statusCode: 400
+        var payload = ServiceResultWrapper<object>.Fail(
+            errors,
+            statusCode: 400,
+            message: "Errores de validación"
         );
 
         return new BadRequestObjectResult(payload);
     };
 });
 
-// ==========================================
-// 🔹 CACHÉ
-// ==========================================
+// ===========================================================
+// 🔹 CACHÉ EN MEMORIA
+// ===========================================================
 builder.Services.AddMemoryCache();
 
-// ==========================================
-// 🔹 SERVICIOS
-// ==========================================
+// ===========================================================
+// 🔹 INYECCIÓN DE DEPENDENCIAS (Servicios / Validadores)
+// ===========================================================
+
+// Auth / Token / Password
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<PasswordService>();
 
+// User
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<UserService>();
 
-builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
-builder.Services.AddScoped<PropertyImageService>(); // 🔹 antes de PropertyService
-
-builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
-builder.Services.AddScoped<PropertyService>();
-
+// Owner
 builder.Services.AddScoped<IValidator<OwnerDto>, OwnerDtoValidator>();
 builder.Services.AddScoped<OwnerService>();
 
+// PropertyImage y Trace (antes de PropertyService)
+builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
+builder.Services.AddScoped<PropertyImageService>();
 builder.Services.AddScoped<IValidator<PropertyTraceDto>, PropertyTraceDtoValidator>();
 builder.Services.AddScoped<PropertyTraceService>();
 
-// 🔹 Password y Token
-builder.Services.AddScoped<PasswordService>();
-builder.Services.AddSingleton<JwtService>();
+// Property principal
+builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
+builder.Services.AddScoped<PropertyService>();
 
-// AutoMapper (si se utiliza MappingProfile)
+// ===========================================================
+// 🔹 AUTOMAPPER (perfil de mapeos globales)
+// ===========================================================
 builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
-// ==========================================
+// ===========================================================
 // 🔹 CORS
-// ==========================================
-builder.Services.AddCors(o =>
+// ===========================================================
+builder.Services.AddCors(opt =>
 {
-    o.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    opt.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
-// ==========================================
-// 🔹 JWT AUTENTICACIÓN
-// ==========================================
+// ===========================================================
+// 🔹 AUTENTICACIÓN JWT
+// ===========================================================
 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
-builder.Services.AddAuthentication(o =>
+builder.Services.AddAuthentication(opt =>
 {
-    o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(o =>
+.AddJwtBearer(opt =>
 {
-    o.TokenValidationParameters = new TokenValidationParameters
+    opt.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
@@ -202,9 +201,9 @@ builder.Services.AddAuthentication(o =>
 
 builder.Services.AddAuthorization();
 
-// ==========================================
+// ===========================================================
 // 🔹 LOGGING
-// ==========================================
+// ===========================================================
 builder.Logging.ClearProviders();
 builder.Logging.AddSimpleConsole(o =>
 {
@@ -212,10 +211,12 @@ builder.Logging.AddSimpleConsole(o =>
     o.SingleLine = true;
 });
 
-// ==========================================
-// 🔹 APP
-// ==========================================
+// ===========================================================
+// 🔹 PIPELINE DE MIDDLEWARE
+// ===========================================================
 var app = builder.Build();
+
+// Orden recomendado
 app.UseMiddleware<LoggingMiddleware>();
 app.UseMiddleware<ErrorHandlerMiddleware>();
 
@@ -224,25 +225,26 @@ app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ===========================================================
+// 🔹 STATUS CODE PAGES (respuestas JSON unificadas)
+// ===========================================================
 app.UseStatusCodePages(async context =>
 {
     var res = context.HttpContext.Response;
-    var message = res.StatusCode switch
+    var msg = res.StatusCode switch
     {
         401 => "No autorizado",
         403 => "Prohibido",
         404 => "Recurso no encontrado",
         405 => "Método no permitido",
         415 => "Tipo de contenido no soportado",
-        _ => "Error"
+        _ => "Error inesperado"
     };
 
-    var payload = RealEstate.API.Infraestructure.Core.Logs.ServiceLogResponseWrapper<string>.Fail(
-        message: message,
-        statusCode: res.StatusCode
-    );
-
+    var payload = ServiceResultWrapper<string>.Fail(msg, res.StatusCode);
     res.ContentType = "application/json";
+
     var json = System.Text.Json.JsonSerializer.Serialize(
         payload,
         new System.Text.Json.JsonSerializerOptions
@@ -252,6 +254,7 @@ app.UseStatusCodePages(async context =>
             WriteIndented = true
         }
     );
+
     await res.WriteAsync(json);
 });
 

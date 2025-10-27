@@ -8,6 +8,79 @@
 
 Plataforma para la gestión inmobiliaria compuesta por una API REST (ASP.NET Core) y un Frontend en React, integrada con MongoDB. Incluye JWT, validaciones con FluentValidation, hash seguro con BCrypt.Net, DTOs, mapeadores y middleware de logging/errores.
 
+# 🏡 RealEstate.API
+
+![.NET](https://img.shields.io/badge/.NET-9.0-blue?logo=dotnet)
+![React](https://img.shields.io/badge/Frontend-React-blue?logo=react)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?logo=mongodb)
+![JWT](https://img.shields.io/badge/Auth-JWT-orange?logo=jsonwebtokens)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+API REST modular para **gestión inmobiliaria**, desarrollada en **ASP.NET Core 9 + MongoDB + React**, con arquitectura limpia, autenticación **JWT**, validación **FluentValidation**, mapeadores DTO/Model, **caché en memoria (IMemoryCache)**, y **hash seguro con BCrypt.Net**.
+
+---
+
+## 🧩 Arquitectura General
+
+```mermaid
+flowchart LR
+  A[Frontend (React + Redux)] --> B[Axios HTTP Client]
+  B --> C[API (ASP.NET Core 9)]
+  C --> D[DTO]
+  D --> E[Validator (FluentValidation)]
+  E --> F[Mapper]
+  F --> G[Model]
+  G --> H[(MongoDB Atlas)]
+  C --> I[IMemoryCache]
+  C --> J[JwtService]
+  J --> K[Tokens JWT]
+```
+
+---
+
+### 🧱 Módulos Principales
+
+| Módulo | Descripción |
+|---------|--------------|
+| **Auth** | Manejo de login, registro, JWT y refresh tokens. |
+| **User** | CRUD de usuarios, validaciones y roles (`user`, `editor`, `admin`). |
+| **Owner** | Gestión de dueños de propiedades. |
+| **Property** | CRUD de propiedades con filtros, cache y paginación. |
+| **PropertyImage** | Administración de imágenes en Base64 o URL. |
+| **PropertyTrace** | Historial de transacciones (venta, arriendo, mejora, etc.). |
+
+---
+
+## 🧬 Estructura del Proyecto
+
+```bash
+RealEstate.API/
+├── Modules/
+│   ├── Auth/
+│   │   ├── Controller/
+│   │   ├── Service/
+│   │   ├── Dto/
+│   │   ├── Validator/
+│   │   └── Interfaces/
+│   ├── User/
+│   │   ├── Controller/
+│   │   ├── Service/
+│   │   ├── Dto/
+│   │   ├── Mapper/
+│   │   ├── Model/
+│   │   └── Validator/
+│   ├── Owner/
+│   ├── Property/
+│   ├── PropertyImage/
+│   └── PropertyTrace/
+├── Infraestructure/
+│   ├── Core/
+│   └── Logs/
+├── Middleware/
+├── Program.cs
+└── README.md
+```
+
 ---
 
 ## Arquitectura

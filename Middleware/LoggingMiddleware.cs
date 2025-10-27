@@ -25,10 +25,10 @@ public class LoggingMiddleware
         var url = request.Path;
 
         // Detectar Id de la propiedad o id genérico
-        var propertyId = context.Request.RouteValues.ContainsKey("propertyId")
-            ? context.Request.RouteValues["propertyId"]?.ToString()
-            : context.Request.RouteValues.ContainsKey("id")
-                ? context.Request.RouteValues["id"]?.ToString()
+        var propertyId = context.Request.RouteValues.TryGetValue("propertyId", out var pId)
+            ? pId?.ToString()
+            : context.Request.RouteValues.TryGetValue("id", out var id)
+                ? id?.ToString()
                 : null;
 
         // Leer cuerpo del request (solo POST, PUT, PATCH)
@@ -36,15 +36,13 @@ public class LoggingMiddleware
         if (method is "POST" or "PUT" or "PATCH")
         {
             context.Request.EnableBuffering();
-            using var reader = new StreamReader(
-                context.Request.Body,
-                Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: false,
-                bufferSize: 1024,
-                leaveOpen: true
-            );
+            using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
             requestBody = await reader.ReadToEndAsync();
             context.Request.Body.Position = 0;
+
+            // Evitar saturación si el body contiene imágenes base64
+            if (requestBody.Length > 1500)
+                requestBody = requestBody.Substring(0, 1500) + "... [truncated]";
         }
 
         // Capturar cuerpo de la respuesta
@@ -52,7 +50,7 @@ public class LoggingMiddleware
         using var responseBodyStream = new MemoryStream();
         context.Response.Body = responseBodyStream;
 
-        // ----- Antes de procesar -----
+        // ======== LOG REQUEST ========
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.Write("[HALL] ");
         Console.ForegroundColor = ConsoleColor.Green;
@@ -88,7 +86,7 @@ public class LoggingMiddleware
         var statusCode = context.Response.StatusCode;
         var responseTime = stopwatch.ElapsedMilliseconds;
 
-        // ----- Después de procesar -----
+        // ======== LOG RESPONSE ========
         Console.ForegroundColor = statusCode >= 400 ? ConsoleColor.Red : ConsoleColor.Yellow;
         Console.Write("[HALL] ");
         Console.ForegroundColor = ConsoleColor.Magenta;
@@ -98,6 +96,9 @@ public class LoggingMiddleware
 
         if (!string.IsNullOrWhiteSpace(responseBody))
         {
+            if (responseBody.Length > 1500)
+                responseBody = responseBody.Substring(0, 1500) + "... [truncated]";
+
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"Response Body: {responseBody}");
             Console.ResetColor();
@@ -112,5 +113,9 @@ public class LoggingMiddleware
             propertyId,
             string.IsNullOrWhiteSpace(responseBody) ? "No body" : responseBody
         );
+
+        // Log especial para PATCH (detección rápida)
+        if (method == "PATCH")
+            Console.WriteLine($"[LOG PATCH] Campos actualizados detectados en {url}");
     }
 }

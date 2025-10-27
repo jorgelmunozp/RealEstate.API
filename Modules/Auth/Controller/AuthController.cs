@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Modules.Auth.Service;
 using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.User.Dto;
-using FluentValidation;
-using FluentValidation.Results;
 
 namespace RealEstate.API.Modules.Auth.Controller
 {
@@ -12,71 +10,53 @@ namespace RealEstate.API.Modules.Auth.Controller
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        private readonly IValidator<LoginDto> _validator;
-        private readonly IValidator<UserDto> _userValidator;
 
-        public AuthController(IAuthService authService, IValidator<LoginDto> validator, IValidator<UserDto> userValidator)
+        public AuthController(IAuthService authService)
         {
             _authService = authService;
-            _validator = validator;
-            _userValidator = userValidator;
         }
 
-        //********* Login Endpoint *********/
+        // ===========================================================
+        // 🔹 POST: /api/auth/login
+        // ===========================================================
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // Valida DTO
-            ValidationResult validationResult = await _validator.ValidateAsync(loginDto);
-            if (!validationResult.IsValid)
-            {
-                return BadRequest(validationResult.Errors.Select(e => new { e.PropertyName, e.ErrorMessage }));
-            }
+            if (dto == null)
+                return BadRequest(new { Message = "El cuerpo de la solicitud no puede estar vacío." });
 
-            try
-            {
-                // 2️⃣ Ejecutar login
-                string token = await _authService.LoginAsync(loginDto);
+            var result = await _authService.LoginAsync(dto);
 
-                // 3️⃣ Devolver token
-                return Ok(new { Token = token });
-            }
-            catch (InvalidOperationException ex)
+            return result.StatusCode switch
             {
-                // Usuario o contraseña incorrectos
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Error genérico
-                return StatusCode(500, new { message = ex.Message });
-            }
+                400 => BadRequest(new { Message = result.Message, Errors = result.Errors }),
+                401 => Unauthorized(new { Message = result.Message }),
+                _ => StatusCode(result.StatusCode, new
+                {
+                    Message = result.Message,
+                    Data = result.Data
+                })
+            };
         }
 
-        //********* Register Endpoint *********/
+        // ===========================================================
+        // 🔹 POST: /api/auth/register
+        // ===========================================================
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserDto userDto)
+        public async Task<IActionResult> Register([FromBody] UserDto dto)
         {
-            ValidationResult validationResult = await _userValidator.ValidateAsync(userDto);
-            if (!validationResult.IsValid)
-            {
-                return BadRequest(validationResult.Errors.Select(e => new { e.PropertyName, e.ErrorMessage }));
-            }
+            if (dto == null)
+                return BadRequest(new { Message = "El cuerpo de la solicitud no puede estar vacío." });
 
-            try
-            {
-                ValidationResult result = await _authService.RegisterAsync(userDto);
-                if (!result.IsValid)
-                {
-                    return BadRequest(result.Errors.Select(e => new { e.PropertyName, e.ErrorMessage }));
-                }
+            var result = await _authService.RegisterAsync(dto);
 
-                return Ok(new { message = "Usuario registrado correctamente" });
-            }
-            catch (Exception ex)
+            return result.StatusCode switch
             {
-                return StatusCode(500, new { message = ex.Message });
-            }
+                400 => BadRequest(new { Message = result.Message, Errors = result.Errors }),
+                401 => Unauthorized(new { Message = result.Message }),
+                201 => Created("", new { Message = result.Message, Data = result.Data }),
+                _ => StatusCode(result.StatusCode, new { Message = result.Message, Data = result.Data })
+            };
         }
     }
 }

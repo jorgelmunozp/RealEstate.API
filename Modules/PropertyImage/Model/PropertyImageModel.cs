@@ -5,7 +5,7 @@ namespace RealEstate.API.Modules.PropertyImage.Model
 {
     public class PropertyImageModel
     {
-        // 🔹 MongoDB _id (interno)
+        // MongoDB _id (interno)
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = string.Empty;

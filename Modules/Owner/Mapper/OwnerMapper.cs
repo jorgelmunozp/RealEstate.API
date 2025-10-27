@@ -7,7 +7,7 @@ namespace RealEstate.API.Modules.Owner.Mapper
     public static class OwnerMapper
     {
         // ===========================================================
-        // 🔹 Model → DTO
+        // Model → DTO
         // ===========================================================
         public static OwnerDto ToDto(this OwnerModel model) => new()
         {
@@ -22,7 +22,7 @@ namespace RealEstate.API.Modules.Owner.Mapper
             => models?.Select(ToDto).ToList() ?? new List<OwnerDto>();
 
         // ===========================================================
-        // 🔹 DTO → Model
+        // DTO → Model
         // ===========================================================
         public static OwnerModel ToModel(this OwnerDto dto)
         {

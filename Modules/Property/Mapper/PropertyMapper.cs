@@ -8,7 +8,7 @@ namespace RealEstate.API.Modules.Property.Mapper
     public static class PropertyMapper
     {
         // ===========================================================
-        // 🔹 Model → DTO
+        // Model → DTO
         // ===========================================================
         public static PropertyDto ToDto(this PropertyModel model)
         {
@@ -24,7 +24,7 @@ namespace RealEstate.API.Modules.Property.Mapper
                 Year = model.Year,
                 IdOwner = model.IdOwner,
 
-                // 🔹 Ahora el DTO soporta imagen (puede venir del servicio)
+                // Ahora el DTO soporta imagen (puede venir del servicio)
                 Image = model is IPropertyWithImage imageModel && imageModel.Image != null
                     ? new PropertyImageDto
                     {
@@ -40,7 +40,7 @@ namespace RealEstate.API.Modules.Property.Mapper
             => models?.Select(ToDto).ToList() ?? new List<PropertyDto>();
 
         // ===========================================================
-        // 🔹 DTO → Model
+        // DTO → Model
         // ===========================================================
         public static PropertyModel ToModel(this PropertyDto dto)
         {
@@ -57,7 +57,7 @@ namespace RealEstate.API.Modules.Property.Mapper
                 CodeInternal = dto.CodeInternal,
                 Year = dto.Year,
                 IdOwner = dto.IdOwner
-                // 🔹 No se incluye la imagen aquí, porque se gestiona en PropertyImageService
+                // No se incluye la imagen aquí, porque se gestiona en PropertyImageService
             };
         }
 

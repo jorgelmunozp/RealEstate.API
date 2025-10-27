@@ -1,5 +1,8 @@
-using RealEstate.API.Modules.User.Model;
 using Microsoft.IdentityModel.Tokens;
+using RealEstate.API.Infraestructure.Core.Logs;
+using RealEstate.API.Modules.User.Model;
+using RealEstate.API.Modules.User.Dto;
+using RealEstate.API.Modules.User.Service;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -9,45 +12,39 @@ namespace RealEstate.API.Modules.Token.Service
     public class JwtService
     {
         private readonly IConfiguration _config;
+        private readonly UserService _userService;
 
-        public JwtService(IConfiguration config)
+        public JwtService(IConfiguration config, UserService userService)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
         // =========================================================
-        // 🔹 MÉTODOS AUXILIARES PARA VARIABLES DE ENTORNO
+        // Helper: Obtener variable desde entorno o IConfiguration
         // =========================================================
         private string GetEnv(string key, string fallback)
         {
-            // Prioriza IConfiguration (Program.cs o appsettings.json)
             var fromConfig = _config[key];
             if (!string.IsNullOrWhiteSpace(fromConfig)) return fromConfig;
 
-            // Si no existe, intenta leer desde variables de entorno (.env)
             var fromEnv = Environment.GetEnvironmentVariable(key);
             return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : fallback;
         }
 
         // =========================================================
-        // 🔹 GENERAR TOKEN DE ACCESO (CORTA DURACIÓN)
+        // Generar Access Token (corto)
         // =========================================================
         public string GenerateToken(UserModel user)
         {
-            if (user == null) throw new ArgumentNullException(nameof(user));
-
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET", ""));
-            if (string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException("JWT_SECRET no configurada");
-
             var issuer = GetEnv("JwtSettings:Issuer", GetEnv("JWT_ISSUER", "RealEstateAPI"));
             var audience = GetEnv("JwtSettings:Audience", GetEnv("JWT_AUDIENCE", "UsuariosAPI"));
             var expiryMinutesString = GetEnv("JwtSettings:ExpiryMinutes", GetEnv("JWT_EXPIRY_MINUTES", "15"));
 
             var key = Encoding.UTF8.GetBytes(secret);
             var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
-
-            if (!double.TryParse(expiryMinutesString, out var expiryMinutes)) expiryMinutes = 15;
+            _ = double.TryParse(expiryMinutesString, out var expiryMinutes);
 
             var claims = new[]
             {
@@ -63,7 +60,7 @@ namespace RealEstate.API.Modules.Token.Service
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes > 0 ? expiryMinutes : 15),
                 signingCredentials: creds
             );
 
@@ -71,24 +68,18 @@ namespace RealEstate.API.Modules.Token.Service
         }
 
         // =========================================================
-        // 🔹 GENERAR REFRESH TOKEN (LARGA DURACIÓN)
+        // Generar Refresh Token (largo)
         // =========================================================
         public string GenerateRefreshToken(UserModel user)
         {
-            if (user == null) throw new ArgumentNullException(nameof(user));
-
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET", ""));
-            if (string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException("JWT_SECRET no configurada");
-
             var issuer = GetEnv("JwtSettings:Issuer", GetEnv("JWT_ISSUER", "RealEstateAPI"));
             var audience = GetEnv("JwtSettings:Audience", GetEnv("JWT_AUDIENCE", "UsuariosAPI"));
             var refreshDaysString = GetEnv("JwtSettings:RefreshDays", GetEnv("JWT_REFRESH_DAYS", "7"));
 
             var key = Encoding.UTF8.GetBytes(secret);
             var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
-
-            if (!double.TryParse(refreshDaysString, out var refreshDays)) refreshDays = 7;
+            _ = double.TryParse(refreshDaysString, out var refreshDays);
 
             var claims = new[]
             {
@@ -101,7 +92,7 @@ namespace RealEstate.API.Modules.Token.Service
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(refreshDays),
+                expires: DateTime.UtcNow.AddDays(refreshDays > 0 ? refreshDays : 7),
                 signingCredentials: creds
             );
 
@@ -109,26 +100,21 @@ namespace RealEstate.API.Modules.Token.Service
         }
 
         // =========================================================
-        // 🔹 GENERAR AMBOS TOKENS (LOGIN / RENOVACIÓN)
+        // Generar ambos tokens
         // =========================================================
         public (string AccessToken, string RefreshToken) GenerateTokens(UserModel user)
         {
-            var accessToken = GenerateToken(user);
-            var refreshToken = GenerateRefreshToken(user);
-            return (accessToken, refreshToken);
+            return (GenerateToken(user), GenerateRefreshToken(user));
         }
 
         // =========================================================
-        // 🔹 VALIDAR TOKEN (ACCESO O REFRESH)
+        // Validar token (acceso o refresh)
         // =========================================================
         public ClaimsPrincipal? ValidateToken(string token)
         {
-            if (string.IsNullOrEmpty(token)) return null;
+            if (string.IsNullOrWhiteSpace(token)) return null;
 
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET", ""));
-            if (string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException("JWT_SECRET no configurada");
-
             var issuer = GetEnv("JwtSettings:Issuer", GetEnv("JWT_ISSUER", "RealEstateAPI"));
             var audience = GetEnv("JwtSettings:Audience", GetEnv("JWT_AUDIENCE", "UsuariosAPI"));
 
@@ -158,7 +144,51 @@ namespace RealEstate.API.Modules.Token.Service
         }
 
         // =========================================================
-        // 🔹 RENOVAR TOKEN DE ACCESO USANDO REFRESH TOKEN
+        // Lógica completa del flujo de Refresh
+        // =========================================================
+        public async Task<ServiceLogResponseWrapper<object>> ProcessRefreshTokenAsync(string authHeader)
+        {
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+                return ServiceLogResponseWrapper<object>.Fail("Cabecera Authorization inválida o ausente", statusCode: 401);
+
+            var refreshToken = authHeader["Bearer ".Length..].Trim();
+            var principal = ValidateToken(refreshToken);
+
+            if (principal == null)
+                return ServiceLogResponseWrapper<object>.Fail("Refresh token inválido o expirado", statusCode: 401);
+
+            var userId = principal.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "nameid")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return ServiceLogResponseWrapper<object>.Fail("No se encontró el ID del usuario en el token", statusCode: 401);
+
+            var userDto = await _userService.GetByIdAsync(userId);
+            if (userDto == null)
+                return ServiceLogResponseWrapper<object>.Fail("Usuario no encontrado o eliminado", statusCode: 401);
+
+            var userModel = new UserModel
+            {
+                Id = userDto.Id,
+                Name = userDto.Name,
+                Email = userDto.Email,
+                Role = userDto.Role,
+                Password = userDto.Password
+            };
+
+            var tokens = RefreshAccessToken(refreshToken, userModel);
+
+            var response = new
+            {
+                accessToken = tokens.AccessToken,
+                refreshToken = tokens.RefreshToken,
+                expiresIn = 60 * 15,
+                user = userDto
+            };
+
+            return ServiceLogResponseWrapper<object>.Ok(response, "Token renovado correctamente", 200);
+        }
+
+        // =========================================================
+        // Renovar usando refresh token válido
         // =========================================================
         public (string AccessToken, string RefreshToken) RefreshAccessToken(string refreshToken, UserModel user)
         {

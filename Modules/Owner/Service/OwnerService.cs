@@ -1,11 +1,11 @@
+using AutoMapper;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
-using FluentValidation.Results;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.Owner.Model;
-using RealEstate.API.Modules.Owner.Mapper;
 
 namespace RealEstate.API.Modules.Owner.Service
 {
@@ -14,9 +14,10 @@ namespace RealEstate.API.Modules.Owner.Service
         private readonly IMongoCollection<OwnerModel> _owners;
         private readonly IValidator<OwnerDto> _validator;
         private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
         private readonly TimeSpan _cacheTtl;
 
-        public OwnerService(IMongoDatabase database, IValidator<OwnerDto> validator, IConfiguration config, IMemoryCache cache)
+        public OwnerService(IMongoDatabase database, IValidator<OwnerDto> validator, IConfiguration config, IMemoryCache cache, IMapper mapper)
         {
             var collection = config["MONGO_COLLECTION_OWNER"]
                 ?? throw new Exception("MONGO_COLLECTION_OWNER no definida");
@@ -24,116 +25,143 @@ namespace RealEstate.API.Modules.Owner.Service
             _owners = database.GetCollection<OwnerModel>(collection);
             _validator = validator;
             _cache = cache;
+            _mapper = mapper;
+
             var ttlStr = config["CACHE_TTL_MINUTES"];
-            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0) ? TimeSpan.FromMinutes(m) : TimeSpan.FromMinutes(5);
+            _cacheTtl = int.TryParse(ttlStr, out var m) && m > 0
+                ? TimeSpan.FromMinutes(m)
+                : TimeSpan.FromMinutes(5);
         }
 
         // ===========================================================
-        // GET: con filtros opcionales
+        // GET (con filtros opcionales y caché)
         // ===========================================================
-        public async Task<List<OwnerDto>> GetAsync(string? name = null, string? address = null, bool refresh = false)
+        public async Task<ServiceResultWrapper<List<OwnerDto>>> GetAsync(string? name = null, string? address = null, bool refresh = false)
         {
             var cacheKey = $"owner:{name}-{address}";
-            if (!refresh)
-            {
-                var cached = _cache.Get<List<OwnerDto>>(cacheKey);
-                if (cached != null) return cached;
-            }
+            if (!refresh && _cache.TryGetValue(cacheKey, out List<OwnerDto>? cached))
+                return ServiceResultWrapper<List<OwnerDto>>.Ok(cached!, "Propietarios obtenidos desde caché");
 
-            var filter = Builders<OwnerModel>.Filter.Empty;
+            var fb = Builders<OwnerModel>.Filter;
+            var filter = fb.Empty;
 
             if (!string.IsNullOrEmpty(name))
-                filter &= Builders<OwnerModel>.Filter.Regex(o => o.Name, new BsonRegularExpression(name, "i"));
+                filter &= fb.Regex(o => o.Name, new BsonRegularExpression(name, "i"));
 
             if (!string.IsNullOrEmpty(address))
-                filter &= Builders<OwnerModel>.Filter.Regex(o => o.Address, new BsonRegularExpression(address, "i"));
+                filter &= fb.Regex(o => o.Address, new BsonRegularExpression(address, "i"));
 
             var owners = await _owners.Find(filter).ToListAsync();
-            var result = owners.Select(OwnerMapper.ToDto).ToList();
+            var result = _mapper.Map<List<OwnerDto>>(owners);
+
             _cache.Set(cacheKey, result, _cacheTtl);
-            return result;
+            return ServiceResultWrapper<List<OwnerDto>>.Ok(result, "Propietarios obtenidos correctamente");
         }
 
         // ===========================================================
         // GET BY ID
         // ===========================================================
-        public async Task<OwnerDto?> GetByIdAsync(string id)
+        public async Task<ServiceResultWrapper<OwnerDto>> GetByIdAsync(string id)
         {
             var owner = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
-            return owner != null ? OwnerMapper.ToDto(owner) : null;
+            if (owner == null)
+                return ServiceResultWrapper<OwnerDto>.Fail("Propietario no encontrado", 404);
+
+            return ServiceResultWrapper<OwnerDto>.Ok(_mapper.Map<OwnerDto>(owner), "Propietario obtenido correctamente");
         }
 
         // ===========================================================
         // CREATE
         // ===========================================================
-        public async Task<string> CreateAsync(OwnerDto owner)
+        public async Task<ServiceResultWrapper<OwnerDto>> CreateAsync(OwnerDto owner)
         {
-            var result = await _validator.ValidateAsync(owner);
-            if (!result.IsValid)
-                throw new ValidationException(result.Errors);
+            var validation = await _validator.ValidateAsync(owner);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<OwnerDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
 
-            var model = owner.ToModel();
+            var model = _mapper.Map<OwnerModel>(owner);
             await _owners.InsertOneAsync(model);
-            return model.Id;
+
+            _cache.Remove("owner:all");
+            return ServiceResultWrapper<OwnerDto>.Created(_mapper.Map<OwnerDto>(model), "Propietario creado correctamente");
         }
 
         // ===========================================================
         // UPDATE (PUT)
         // ===========================================================
-        public async Task<ValidationResult> UpdateAsync(string id, OwnerDto owner)
+        public async Task<ServiceResultWrapper<OwnerDto>> UpdateAsync(string id, OwnerDto owner)
         {
-            var result = await _validator.ValidateAsync(owner);
-            if (!result.IsValid) return result;
+            var validation = await _validator.ValidateAsync(owner);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<OwnerDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
 
             var existing = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
             if (existing == null)
-            {
-                result.Errors.Add(new ValidationFailure("Id", "Propietario no encontrado"));
-                return result;
-            }
+                return ServiceResultWrapper<OwnerDto>.Fail("Propietario no encontrado", 404);
 
-            var model = owner.ToModel();
-            model.Id = id;
+            var updatedModel = _mapper.Map(owner, existing);
+            await _owners.ReplaceOneAsync(o => o.Id == id, updatedModel);
 
-            await _owners.ReplaceOneAsync(o => o.Id == id, model);
-            return result;
+            _cache.Remove("owner:all");
+            _cache.Remove($"owner:{id}");
+
+            return ServiceResultWrapper<OwnerDto>.Updated(_mapper.Map<OwnerDto>(updatedModel), "Propietario actualizado correctamente");
         }
 
         // ===========================================================
-        // PATCH parcial (solo campos enviados)
+        // PATCH (actualización parcial)
         // ===========================================================
-        public async Task<OwnerDto?> PatchAsync(string id, Dictionary<string, object> fields)
+        public async Task<ServiceResultWrapper<OwnerDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
-            var existing = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
-            if (existing == null) return null;
+            if (fields == null || fields.Count == 0)
+                return ServiceResultWrapper<OwnerDto>.Fail("No se enviaron campos válidos para actualizar", 400);
 
-            var updates = new List<UpdateDefinition<OwnerModel>>();
+            var existing = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return ServiceResultWrapper<OwnerDto>.Fail("Propietario no encontrado", 404);
+
             var builder = Builders<OwnerModel>.Update;
+            var updates = new List<UpdateDefinition<OwnerModel>>();
 
             foreach (var field in fields)
             {
-                if (string.IsNullOrWhiteSpace(field.Key)) continue;
-                var propInfo = typeof(OwnerModel).GetProperty(field.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (propInfo != null)
-                    updates.Add(builder.Set(propInfo.Name, BsonValue.Create(field.Value)));
+                var prop = typeof(OwnerModel).GetProperty(field.Key,
+                    System.Reflection.BindingFlags.IgnoreCase |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Instance);
+
+                if (prop != null)
+                    updates.Add(builder.Set(prop.Name, BsonValue.Create(field.Value)));
             }
 
-            if (!updates.Any()) return null;
+            if (!updates.Any())
+                return ServiceResultWrapper<OwnerDto>.Fail("Sin cambios válidos para aplicar", 400);
 
-            var update = builder.Combine(updates);
-            await _owners.UpdateOneAsync(o => o.Id == id, update);
+            await _owners.UpdateOneAsync(o => o.Id == id, builder.Combine(updates));
 
             var updated = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
-            return updated != null ? OwnerMapper.ToDto(updated) : null;
+            if (updated == null)
+                return ServiceResultWrapper<OwnerDto>.Fail("Error al actualizar propietario", 500);
+
+            _cache.Remove("owner:all");
+            _cache.Remove($"owner:{id}");
+
+            return ServiceResultWrapper<OwnerDto>.Updated(_mapper.Map<OwnerDto>(updated), "Propietario actualizado parcialmente");
         }
 
         // ===========================================================
         // DELETE
         // ===========================================================
-        public async Task<bool> DeleteAsync(string id)
+        public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
             var result = await _owners.DeleteOneAsync(o => o.Id == id);
-            return result.DeletedCount > 0;
+            if (result.DeletedCount == 0)
+                return ServiceResultWrapper<bool>.Fail("Propietario no encontrado", 404);
+
+            _cache.Remove("owner:all");
+            _cache.Remove($"owner:{id}");
+
+            return ServiceResultWrapper<bool>.Deleted("Propietario eliminado correctamente");
         }
     }
 }

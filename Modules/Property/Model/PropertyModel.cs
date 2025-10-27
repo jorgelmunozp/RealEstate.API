@@ -1,6 +1,8 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.PropertyImage.Dto;
+using RealEstate.API.Modules.PropertyTrace.Dto;
 
 namespace RealEstate.API.Modules.Property.Model
 {
@@ -29,9 +31,13 @@ namespace RealEstate.API.Modules.Property.Model
         public string IdOwner { get; set; } = string.Empty;
 
         // ===========================================================
-        // 🔹 Campo virtual (no se guarda en la base de datos)
+        // Campo virtual (no se guarda en la base de datos)
         // ===========================================================
         [BsonIgnore]
+        public OwnerDto? Owner { get; set; }
+        [BsonIgnore]
         public PropertyImageDto? Image { get; set; }
+        [BsonIgnore]
+        public PropertyTraceDto? Traces { get; set; }                
     }
 }

@@ -1,10 +1,10 @@
+using AutoMapper;
 using FluentValidation;
 using Microsoft.Extensions.Caching.Memory;
-using FluentValidation.Results;
 using MongoDB.Driver;
+using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Model;
-using RealEstate.API.Modules.PropertyImage.Mapper;
 
 namespace RealEstate.API.Modules.PropertyImage.Service
 {
@@ -13,9 +13,10 @@ namespace RealEstate.API.Modules.PropertyImage.Service
         private readonly IMongoCollection<PropertyImageModel> _images;
         private readonly IValidator<PropertyImageDto> _validator;
         private readonly IMemoryCache _cache;
+        private readonly IMapper _mapper;
         private readonly TimeSpan _cacheTtl;
 
-        public PropertyImageService(IMongoDatabase database, IValidator<PropertyImageDto> validator, IConfiguration config, IMemoryCache cache)
+        public PropertyImageService(IMongoDatabase database, IValidator<PropertyImageDto> validator, IConfiguration config, IMemoryCache cache, IMapper mapper)
         {
             var collection = config["MONGO_COLLECTION_PROPERTYIMAGE"]
                 ?? throw new Exception("MONGO_COLLECTION_PROPERTYIMAGE no definida");
@@ -23,17 +24,18 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             _images = database.GetCollection<PropertyImageModel>(collection);
             _validator = validator;
             _cache = cache;
+            _mapper = mapper;
 
             var ttlStr = config["CACHE_TTL_MINUTES"];
-            _cacheTtl = (int.TryParse(ttlStr, out var m) && m > 0)
+            _cacheTtl = int.TryParse(ttlStr, out var m) && m > 0
                 ? TimeSpan.FromMinutes(m)
                 : TimeSpan.FromMinutes(5);
         }
 
         // ===========================================================
-        // 🔹 GET ALL con filtros, paginación y caché
+        // GET ALL (con filtros, paginación y caché)
         // ===========================================================
-        public async Task<IEnumerable<PropertyImageDto>> GetAllAsync(
+        public async Task<ServiceResultWrapper<IEnumerable<PropertyImageDto>>> GetAllAsync(
             string? idProperty = null,
             bool? enabled = null,
             int page = 1,
@@ -41,137 +43,143 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             bool refresh = false)
         {
             var cacheKey = $"pimg:{idProperty}-{enabled}-{page}-{limit}";
-            if (!refresh && _cache.TryGetValue(cacheKey, out List<PropertyImageDto>? cached))
-                return cached!;
+            if (!refresh && _cache.TryGetValue(cacheKey, out IEnumerable<PropertyImageDto>? cached))
+                return ServiceResultWrapper<IEnumerable<PropertyImageDto>>.Ok(cached, "Imágenes obtenidas desde caché");
 
-            var filter = Builders<PropertyImageModel>.Filter.Empty;
+            var fb = Builders<PropertyImageModel>.Filter;
+            var filter = fb.Empty;
 
-            if (!string.IsNullOrEmpty(idProperty))
-                filter &= Builders<PropertyImageModel>.Filter.Eq(i => i.IdProperty, idProperty);
+            if (!string.IsNullOrWhiteSpace(idProperty))
+                filter &= fb.Eq(i => i.IdProperty, idProperty);
 
             if (enabled.HasValue)
-                filter &= Builders<PropertyImageModel>.Filter.Eq(i => i.Enabled, enabled.Value);
+                filter &= fb.Eq(i => i.Enabled, enabled.Value);
 
             var images = await _images.Find(filter)
                 .Skip((page - 1) * limit)
                 .Limit(limit)
                 .ToListAsync();
 
-            var result = images.Select(PropertyImageMapper.ToDto).ToList();
+            var result = _mapper.Map<IEnumerable<PropertyImageDto>>(images);
+            _cache.Set(cacheKey, result, _cacheTtl);
 
-            if (!refresh)
-                _cache.Set(cacheKey, result, _cacheTtl);
-
-            return result;
+            return ServiceResultWrapper<IEnumerable<PropertyImageDto>>.Ok(result, "Listado de imágenes obtenido correctamente");
         }
 
         // ===========================================================
-        // 🔹 GET BY ID
+        // GET BY ID
         // ===========================================================
-        public async Task<PropertyImageDto?> GetByIdAsync(string idPropertyImage)
+        public async Task<ServiceResultWrapper<PropertyImageDto>> GetByIdAsync(string idPropertyImage)
         {
             var image = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
-            return image != null ? PropertyImageMapper.ToDto(image) : null;
+            if (image == null)
+                return ServiceResultWrapper<PropertyImageDto>.Fail("Imagen no encontrada", 404);
+
+            return ServiceResultWrapper<PropertyImageDto>.Ok(_mapper.Map<PropertyImageDto>(image), "Imagen obtenida correctamente");
         }
 
         // ===========================================================
-        // 🔹 GET BY PROPERTY ID
+        // GET BY PROPERTY ID
         // ===========================================================
         public async Task<PropertyImageDto?> GetByPropertyIdAsync(string propertyId)
         {
             var image = await _images.Find(i => i.IdProperty == propertyId).FirstOrDefaultAsync();
-            return image != null ? PropertyImageMapper.ToDto(image) : null;
+            return image != null ? _mapper.Map<PropertyImageDto>(image) : null;
         }
 
         // ===========================================================
-        // 🔹 CREATE (POST)
+        // CREATE
         // ===========================================================
-        public async Task<string> CreateAsync(PropertyImageDto image)
+        public async Task<ServiceResultWrapper<PropertyImageDto>> CreateAsync(PropertyImageDto image)
         {
             if (image == null)
-                throw new ValidationException("El cuerpo de la solicitud no puede estar vacío");
+                return ServiceResultWrapper<PropertyImageDto>.Fail("El cuerpo de la solicitud no puede estar vacío", 400);
 
-            var result = await _validator.ValidateAsync(image);
-            if (!result.IsValid)
-                throw new ValidationException(result.Errors);
+            var validation = await _validator.ValidateAsync(image);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<PropertyImageDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
 
-            // Evita duplicar si ya existe una imagen para la propiedad
-            if (!string.IsNullOrEmpty(image.IdProperty))
+            if (!string.IsNullOrWhiteSpace(image.IdProperty))
             {
                 var existing = await _images.Find(i => i.IdProperty == image.IdProperty).FirstOrDefaultAsync();
                 if (existing != null)
                 {
-                    // 🔹 Si ya existe, se actualiza en vez de crear nueva
                     var update = Builders<PropertyImageModel>.Update
                         .Set(i => i.File, image.File)
                         .Set(i => i.Enabled, image.Enabled);
+
                     await _images.UpdateOneAsync(i => i.Id == existing.Id, update);
-                    return existing.Id;
+                    var updated = await _images.Find(i => i.Id == existing.Id).FirstOrDefaultAsync();
+                    return ServiceResultWrapper<PropertyImageDto>.Updated(_mapper.Map<PropertyImageDto>(updated), "Imagen actualizada correctamente");
                 }
             }
 
-            var model = image.ToModel();
+            var model = _mapper.Map<PropertyImageModel>(image);
             await _images.InsertOneAsync(model);
-            return model.Id;
+            return ServiceResultWrapper<PropertyImageDto>.Created(_mapper.Map<PropertyImageDto>(model), "Imagen creada correctamente");
         }
 
         // ===========================================================
-        // 🔹 UPDATE COMPLETO (PUT)
+        // UPDATE (PUT)
         // ===========================================================
-        public async Task<ValidationResult> UpdateAsync(string idPropertyImage, PropertyImageDto image)
+        public async Task<ServiceResultWrapper<PropertyImageDto>> UpdateAsync(string idPropertyImage, PropertyImageDto image)
         {
             image.IdPropertyImage = idPropertyImage;
-            var result = await _validator.ValidateAsync(image);
-            if (!result.IsValid) return result;
+
+            var validation = await _validator.ValidateAsync(image);
+            if (!validation.IsValid)
+                return ServiceResultWrapper<PropertyImageDto>.Fail(validation.Errors.Select(e => e.ErrorMessage), 400);
 
             var existing = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
             if (existing == null)
-            {
-                result.Errors.Add(new ValidationFailure("IdPropertyImage", "Imagen no encontrada"));
-                return result;
-            }
+                return ServiceResultWrapper<PropertyImageDto>.Fail("Imagen no encontrada", 404);
 
-            var model = image.ToModel();
-            model.Id = existing.Id;
+            var updatedModel = _mapper.Map(image, existing);
+            await _images.ReplaceOneAsync(p => p.Id == existing.Id, updatedModel);
 
-            await _images.ReplaceOneAsync(p => p.Id == existing.Id, model);
-            return result;
+            return ServiceResultWrapper<PropertyImageDto>.Updated(_mapper.Map<PropertyImageDto>(updatedModel), "Imagen actualizada correctamente");
         }
 
         // ===========================================================
-        // 🔹 UPDATE PARCIAL (PATCH)
+        // PATCH (actualización parcial)
         // ===========================================================
-        public async Task<ValidationResult> UpdatePartialAsync(string idPropertyImage, PropertyImageDto image)
+        public async Task<ServiceResultWrapper<PropertyImageDto>> PatchAsync(string idPropertyImage, Dictionary<string, object> fields)
         {
-            image.IdPropertyImage = idPropertyImage;
-            var result = await _validator.ValidateAsync(image);
+            if (fields == null || fields.Count == 0)
+                return ServiceResultWrapper<PropertyImageDto>.Fail("No se enviaron campos válidos", 400);
 
             var existing = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
             if (existing == null)
+                return ServiceResultWrapper<PropertyImageDto>.Fail("Imagen no encontrada", 404);
+
+            var builder = Builders<PropertyImageModel>.Update;
+            var updates = new List<UpdateDefinition<PropertyImageModel>>();
+
+            foreach (var f in fields)
             {
-                result.Errors.Add(new ValidationFailure("IdPropertyImage", "Imagen no encontrada"));
-                return result;
+                if (!string.IsNullOrWhiteSpace(f.Key))
+                    updates.Add(builder.Set(f.Key, f.Value));
             }
 
-            // Solo actualiza campos enviados
-            if (!string.IsNullOrEmpty(image.File))
-                existing.File = image.File;
-            if (!string.IsNullOrEmpty(image.IdProperty))
-                existing.IdProperty = image.IdProperty;
+            if (!updates.Any())
+                return ServiceResultWrapper<PropertyImageDto>.Fail("No se enviaron campos válidos", 400);
 
-            existing.Enabled = image.Enabled;
+            await _images.UpdateOneAsync(p => p.Id == idPropertyImage, builder.Combine(updates));
+            var updated = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
 
-            await _images.ReplaceOneAsync(p => p.Id == existing.Id, existing);
-            return result;
+            return ServiceResultWrapper<PropertyImageDto>.Updated(_mapper.Map<PropertyImageDto>(updated), "Imagen actualizada parcialmente");
         }
 
         // ===========================================================
-        // 🔹 DELETE
+        // DELETE
         // ===========================================================
-        public async Task<bool> DeleteAsync(string idPropertyImage)
+        public async Task<ServiceResultWrapper<bool>> DeleteAsync(string idPropertyImage)
         {
             var result = await _images.DeleteOneAsync(p => p.Id == idPropertyImage);
-            return result.DeletedCount > 0;
+            if (result.DeletedCount == 0)
+                return ServiceResultWrapper<bool>.Fail("Imagen no encontrada", 404);
+
+            return ServiceResultWrapper<bool>.Deleted("Imagen eliminada correctamente");
         }
     }
 }

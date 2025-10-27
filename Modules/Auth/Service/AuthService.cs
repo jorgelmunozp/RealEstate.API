@@ -4,8 +4,9 @@ using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.User.Model;
 using RealEstate.API.Modules.User.Dto;
 using RealEstate.API.Modules.User.Service;
+using RealEstate.API.Modules.User.Mapper;
+using RealEstate.API.Infraestructure.Core.Logs;
 using FluentValidation;
-using FluentValidation.Results;
 
 namespace RealEstate.API.Modules.Auth.Service
 {
@@ -32,7 +33,7 @@ namespace RealEstate.API.Modules.Auth.Service
         }
 
         // =========================================================
-        // 🔹 Helper: Obtener variable desde entorno o IConfiguration
+        // 🔹 Helper: obtener variable de entorno o IConfiguration
         // =========================================================
         private string? GetEnv(string key, string? fallback = null)
         {
@@ -44,54 +45,93 @@ namespace RealEstate.API.Modules.Auth.Service
         }
 
         // =========================================================
-        // 🔹 AUTENTICAR USUARIO
+        // 🔹 LOGIN (autenticar usuario)
         // =========================================================
-        public async Task<string> LoginAsync(LoginDto loginDto)
+        public async Task<ServiceLogResponseWrapper<object>> LoginAsync(LoginDto loginDto)
         {
-            // 1️⃣ Validar DTO
             var validationResult = await _validator.ValidateAsync(loginDto);
             if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            {
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage);
+                return ServiceLogResponseWrapper<object>.Fail("Errores de validación", errors, 400);
+            }
 
-            // 2️⃣ Buscar usuario por correo
             var user = await _userCollection.Find(u => u.Email == loginDto.Email).FirstOrDefaultAsync();
-            if (user == null)
-                throw new InvalidOperationException("Usuario o contraseña incorrectos");
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
+                return ServiceLogResponseWrapper<object>.Fail("Usuario o contraseña incorrectos", statusCode: 401);
 
-            // 3️⃣ Verificar contraseña (BCrypt)
-            if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
-                throw new InvalidOperationException("Usuario o contraseña incorrectos");
-
-            // 4️⃣ Generar tokens (Access + Refresh)
             var tokens = _jwtService.GenerateTokens(user);
-            return tokens.AccessToken;
+
+            var response = new
+            {
+                accessToken = tokens.AccessToken,
+                refreshToken = tokens.RefreshToken,
+                user = new { user.Id, user.Name, user.Email, user.Role }
+            };
+
+            return ServiceLogResponseWrapper<object>.Ok(response, "Inicio de sesión exitoso", 200);
         }
 
         // =========================================================
-        // 🔹 REGISTRAR NUEVO USUARIO
+        // 🔹 REGISTER (crear usuario nuevo)
         // =========================================================
-        public async Task<ValidationResult> RegisterAsync(UserDto userDto)
+        public async Task<ServiceLogResponseWrapper<object>> RegisterAsync(UserDto userDto)
         {
-            // 1️⃣ Validación mínima
-            var prelim = new ValidationResult();
             if (string.IsNullOrWhiteSpace(userDto.Password))
             {
-                prelim.Errors.Add(new ValidationFailure("Password", "La contraseña es obligatoria"));
-                return prelim;
+                return ServiceLogResponseWrapper<object>.Fail(
+                    "La contraseña es obligatoria",
+                    new List<string> { "Password no puede estar vacío" },
+                    400
+                );
             }
 
-            // 2️⃣ Verificar si el correo ya está registrado
             var existingUser = await _userService.GetByEmailAsync(userDto.Email);
             if (existingUser != null)
             {
-                var validation = new ValidationResult();
-                validation.Errors.Add(new ValidationFailure("Email", "El email ya está registrado"));
-                return validation;
+                return ServiceLogResponseWrapper<object>.Fail(
+                    "El correo electrónico ya está registrado",
+                    new List<string> { "Email duplicado" },
+                    400
+                );
             }
 
-            // 3️⃣ Crear usuario (UserService aplica hash automáticamente)
-            var result = await _userService.CreateAsync(userDto);
-            return result;
+            var result = await _userService.CreateUserAsync(userDto);
+            if (!result.Success)
+            {
+                return ServiceLogResponseWrapper<object>.Fail(
+                    "Errores al crear el usuario",
+                    result.Errors ?? new List<string> { "Error desconocido" },
+                    400
+                );
+            }
+
+            var createdUser = result.Data;
+            if (createdUser == null)
+            {
+                return ServiceLogResponseWrapper<object>.Fail(
+                    "No se pudo recuperar el usuario creado",
+                    new List<string> { "Usuario nulo" },
+                    400
+                );
+            }
+
+            var tokens = _jwtService.GenerateTokens(createdUser.ToModel());
+
+            var response = new
+            {
+                accessToken = tokens.AccessToken,
+                refreshToken = tokens.RefreshToken,
+                user = new
+                {
+                    createdUser.Id,
+                    createdUser.Name,
+                    createdUser.Email,
+                    createdUser.Role
+                }
+            };
+
+            return ServiceLogResponseWrapper<object>.Ok(response, "Usuario registrado correctamente", 201);
         }
     }
 }

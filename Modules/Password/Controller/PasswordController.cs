@@ -20,7 +20,7 @@ namespace RealEstate.API.Modules.Password.Controller
 
         // =========================================================
         // POST: api/password/recover
-        // 🔹 Envía un correo con el enlace de recuperación
+        // Envía un correo con el enlace de recuperación
         // =========================================================
         [HttpPost("recover")]
         [AllowAnonymous]
@@ -42,7 +42,7 @@ namespace RealEstate.API.Modules.Password.Controller
 
         // =========================================================
         // GET: api/password/reset/{token}
-        // 🔹 Verifica si el token de recuperación es válido
+        // Verifica si el token de recuperación es válido
         // =========================================================
         [HttpGet("reset/{token}")]
         [AllowAnonymous]
@@ -64,7 +64,7 @@ namespace RealEstate.API.Modules.Password.Controller
 
         // =========================================================
         // PATCH: api/password/update
-        // 🔹 Cambia la contraseña del usuario tras verificar el token
+        // Cambia la contraseña del usuario tras verificar el token
         // =========================================================
         [HttpPatch("update")]
         [AllowAnonymous]

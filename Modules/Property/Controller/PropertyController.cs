@@ -20,6 +20,7 @@ namespace RealEstate.API.Modules.Property.Controller
         // GET: api/property
         // ===========================================================
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? name,
             [FromQuery] string? address,
@@ -31,39 +32,32 @@ namespace RealEstate.API.Modules.Property.Controller
             [FromQuery] bool refresh = false)
         {
             var result = await _service.GetCachedAsync(name, address, idOwner, minPrice, maxPrice, page, limit, refresh);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         // ===========================================================
         // GET: api/property/{id}
         // ===========================================================
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(string id)
         {
             var result = await _service.GetByIdAsync(id);
-            return result == null
-                ? NotFound(new { message = "Propiedad no encontrada" })
-                : Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         // ===========================================================
         // POST: api/property
         // ===========================================================
         [HttpPost]
-        [Authorize]
-        public async Task<IActionResult> Create([FromBody] PropertyDto property)
+        [Authorize(Roles = "user,editor,admin")]
+        public async Task<IActionResult> Create([FromBody] PropertyDto dto)
         {
-            if (property == null)
-                return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
+            if (dto == null)
+                return BadRequest(new { success = false, message = "El cuerpo de la solicitud no puede ser nulo." });
 
-            // ✅ Asegura que el binding incluya Image correctamente
-            if (property.Image != null && string.IsNullOrWhiteSpace(property.Image.IdProperty))
-                property.Image.IdProperty = property.IdProperty ?? string.Empty;
-
-            var result = await _service.CreateAsync(property);
-            return !result.Success
-                ? StatusCode(result.StatusCode, result)
-                : CreatedAtAction(nameof(GetById), new { id = result.Data?.IdProperty }, result);
+            var result = await _service.CreateAsync(dto);
+            return StatusCode(result.StatusCode, result);
         }
 
         // ===========================================================
@@ -71,19 +65,13 @@ namespace RealEstate.API.Modules.Property.Controller
         // ===========================================================
         [HttpPut("{id}")]
         [Authorize(Roles = "editor,admin")]
-        public async Task<IActionResult> Update(string id, [FromBody] PropertyDto property)
+        public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
-            if (property == null)
-                return BadRequest(new { message = "El cuerpo de la solicitud no puede estar vacío" });
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
 
-            // ✅ Corrige posible pérdida del Id en imagen embebida
-            if (property.Image != null && string.IsNullOrWhiteSpace(property.Image.IdProperty))
-                property.Image.IdProperty = id;
-
-            var result = await _service.UpdateAsync(id, property);
-            return !result.Success
-                ? StatusCode(result.StatusCode, result)
-                : Ok(result);
+            var result = await _service.UpdateAsync(id, dto);
+            return StatusCode(result.StatusCode, result);
         }
 
         // ===========================================================
@@ -93,13 +81,14 @@ namespace RealEstate.API.Modules.Property.Controller
         [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
+
             if (fields == null || fields.Count == 0)
-                return BadRequest(new { message = "No se enviaron campos a actualizar" });
+                return BadRequest(new { success = false, message = "No se enviaron campos válidos para actualizar." });
 
             var result = await _service.PatchAsync(id, fields);
-            return !result.Success
-                ? StatusCode(result.StatusCode, result)
-                : Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         // ===========================================================
@@ -109,10 +98,11 @@ namespace RealEstate.API.Modules.Property.Controller
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
+
             var result = await _service.DeleteAsync(id);
-            return !result.Success
-                ? StatusCode(result.StatusCode, result)
-                : Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
     }
 }

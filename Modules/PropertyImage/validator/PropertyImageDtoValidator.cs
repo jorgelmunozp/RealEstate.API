@@ -8,14 +8,14 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
         public PropertyImageDtoValidator()
         {
             // ===========================================================
-            // 🔹 Validación común para todas las operaciones
+            // Validación común para todas las operaciones
             // ===========================================================
             RuleFor(p => p.Enabled)
                 .NotNull()
                 .WithMessage("El campo 'Enabled' no puede ser nulo.");
 
             // ===========================================================
-            // 🔹 Validación específica para creación (POST)
+            // Validación específica para creación (POST)
             // ===========================================================
             When(IsCreateOperation, () =>
             {
@@ -29,7 +29,7 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
             });
 
             // ===========================================================
-            // 🔹 Validación específica para actualización (PUT / PATCH)
+            // Validación específica para actualización (PUT / PATCH)
             // ===========================================================
             When(IsUpdateOperation, () =>
             {
@@ -51,7 +51,7 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
         }
 
         // ===========================================================
-        // 🔹 Helpers para distinguir tipo de operación
+        // Helpers para distinguir tipo de operación
         // ===========================================================
         private static bool IsCreateOperation(PropertyImageDto dto) =>
             string.IsNullOrEmpty(dto.IdPropertyImage);
