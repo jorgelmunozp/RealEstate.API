@@ -6,7 +6,7 @@ namespace RealEstate.API.Modules.User.Model
     public class UserModel
     {
         // ===========================================================
-        // 🔹 Identificador (ObjectId en MongoDB)
+        // Identificador (ObjectId en MongoDB)
         // ===========================================================
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
@@ -14,35 +14,35 @@ namespace RealEstate.API.Modules.User.Model
         public string Id { get; set; } = string.Empty;
 
         // ===========================================================
-        // 🔹 Nombre completo
+        // Nombre completo
         // ===========================================================
         [BsonElement("Name")]
         [BsonIgnoreIfNull]
         public string Name { get; set; } = string.Empty;
 
         // ===========================================================
-        // 🔹 Correo electrónico
+        // Correo electrónico
         // ===========================================================
         [BsonElement("Email")]
         [BsonIgnoreIfNull]
         public string Email { get; set; } = string.Empty;
 
         // ===========================================================
-        // 🔹 Contraseña (hash BCrypt)
+        // Contraseña (hash BCrypt)
         // ===========================================================
         [BsonElement("Password")]
         [BsonIgnoreIfNull]
         public string Password { get; set; } = string.Empty;
 
         // ===========================================================
-        // 🔹 Rol del usuario
+        // Rol del usuario
         // ===========================================================
         [BsonElement("Role")]
         [BsonIgnoreIfNull]
         public string Role { get; set; } = "user";
 
         // ===========================================================
-        // 🔹 Metadatos (opcional para auditoría o trazabilidad)
+        // Metadatos (opcional para auditoría o trazabilidad)
         // ===========================================================
         [BsonElement("CreatedAt")]
         [BsonIgnoreIfNull]

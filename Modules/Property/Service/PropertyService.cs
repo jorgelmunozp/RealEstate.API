@@ -1,28 +1,29 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
+using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.Property.Dto;
 using RealEstate.API.Modules.Property.Model;
 using RealEstate.API.Modules.Property.Mapper;
+using RealEstate.API.Modules.Property.Interface;
 using RealEstate.API.Modules.Owner.Model;
 using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.Owner.Mapper;
-using RealEstate.API.Modules.Owner.Service;
+using RealEstate.API.Modules.Owner.Interface;
 using RealEstate.API.Modules.PropertyImage.Model;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Mapper;
-using RealEstate.API.Modules.PropertyImage.Service;
+using RealEstate.API.Modules.PropertyImage.Interface;
 using RealEstate.API.Modules.PropertyTrace.Model;
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Mapper;
-using RealEstate.API.Modules.PropertyTrace.Service;
-using Microsoft.Extensions.Caching.Memory;
-using RealEstate.API.Infraestructure.Core.Services;
+using RealEstate.API.Modules.PropertyTrace.Interface;
 using System.Text.Json;
 
 namespace RealEstate.API.Modules.Property.Service
 {
-    public class PropertyService
+    public class PropertyService : IPropertyService
     {
         private readonly IMongoCollection<PropertyModel> _properties;
         private readonly IMongoCollection<OwnerModel> _owners;
@@ -31,18 +32,18 @@ namespace RealEstate.API.Modules.Property.Service
         private readonly IValidator<PropertyDto> _validator;
         private readonly IMemoryCache _cache;
         private readonly TimeSpan _cacheTtl;
-        private readonly OwnerService _ownerService;
-        private readonly PropertyImageService _imageService;
-        private readonly PropertyTraceService _traceService;
+        private readonly IOwnerService _ownerService;
+        private readonly IPropertyImageService _imageService;
+        private readonly IPropertyTraceService _traceService;
 
         public PropertyService(
             IMongoDatabase database,
             IValidator<PropertyDto> validator,
             IConfiguration config,
             IMemoryCache cache,
-            OwnerService ownerService,
-            PropertyImageService imageService,
-            PropertyTraceService traceService)
+            IOwnerService ownerService,
+            IPropertyImageService imageService,
+            IPropertyTraceService traceService)
         {
             _properties = database.GetCollection<PropertyModel>(config["MONGO_COLLECTION_PROPERTY"] ?? throw new Exception("MONGO_COLLECTION_PROPERTY no definida"));
             _owners = database.GetCollection<OwnerModel>(config["MONGO_COLLECTION_OWNER"] ?? throw new Exception("MONGO_COLLECTION_OWNER no definida"));
@@ -338,9 +339,7 @@ namespace RealEstate.API.Modules.Property.Service
         // ===========================================================
         // Helper: consulta completa
         // ===========================================================
-        private async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync(
-            string? name, string? address, string? idOwner,
-            long? minPrice, long? maxPrice, int page, int limit)
+        private async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync( string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page, int limit)
         {
             var fb = Builders<PropertyModel>.Filter;
             var filters = new List<FilterDefinition<PropertyModel>>();
@@ -416,7 +415,7 @@ namespace RealEstate.API.Modules.Property.Service
                 return value;
             }
 
-            public static async Task ProcessOwnerPatchAsync(object ownerObj, string? existingIdOwner, string propertyId, OwnerService ownerService, IMongoCollection<PropertyModel> propertyCollection)
+            public static async Task ProcessOwnerPatchAsync(object ownerObj, string? existingIdOwner, string propertyId, IOwnerService ownerService, IMongoCollection<PropertyModel> propertyCollection)
             {
                 var ownerDict = NormalizeValue(ownerObj) as Dictionary<string, object>;
                 if (ownerDict == null) return;
@@ -434,7 +433,7 @@ namespace RealEstate.API.Modules.Property.Service
                 }
             }
 
-            public static async Task ProcessImagePatchAsync(object imageObj, string propertyId, PropertyImageService imageService)
+            public static async Task ProcessImagePatchAsync(object imageObj, string propertyId, IPropertyImageService imageService)
             {
                 var imageDict = NormalizeValue(imageObj) as Dictionary<string, object>;
                 if (imageDict == null) return;
@@ -452,7 +451,7 @@ namespace RealEstate.API.Modules.Property.Service
                 }
             }
 
-            public static async Task ProcessTracesPatchAsync(object tracesObj, string propertyId, PropertyTraceService traceService)
+            public static async Task ProcessTracesPatchAsync(object tracesObj, string propertyId, IPropertyTraceService traceService)
             {
                 var tracesList = NormalizeValue(tracesObj) as List<object>;
                 if (tracesList == null) return;

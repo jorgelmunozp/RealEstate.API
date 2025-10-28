@@ -5,10 +5,11 @@ using MongoDB.Driver;
 using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyTrace.Dto;
 using RealEstate.API.Modules.PropertyTrace.Model;
+using RealEstate.API.Modules.PropertyTrace.Interface;
 
 namespace RealEstate.API.Modules.PropertyTrace.Service
 {
-    public class PropertyTraceService
+    public class PropertyTraceService : IPropertyTraceService
     {
         private readonly IMongoCollection<PropertyTraceModel> _traces;
         private readonly IValidator<PropertyTraceDto> _validator;

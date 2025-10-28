@@ -2,7 +2,7 @@ using RealEstate.API.Infraestructure.Core.Logs;
 using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.User.Dto;
 
-namespace RealEstate.API.Modules.Auth.Service
+namespace RealEstate.API.Modules.Auth.Interface
 {
     public interface IAuthService
     {

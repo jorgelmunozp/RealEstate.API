@@ -13,7 +13,7 @@ namespace RealEstate.API.Middleware
             {
                 string ToCamel(string s) => string.IsNullOrEmpty(s) ? s : char.ToLowerInvariant(s[0]) + s.Substring(1);
 
-                var errors = validationException.Errors
+                var Errors = validationException.Errors
                     .GroupBy(e => ToCamel(e.PropertyName))
                     .ToDictionary(
                         g => g.Key,
@@ -22,8 +22,8 @@ namespace RealEstate.API.Middleware
 
                 context.Result = new BadRequestObjectResult(new
                 {
-                    message = "Error de validación",
-                    errors
+                    Message = "Error de validación",
+                    Errors
                 });
 
                 context.ExceptionHandled = true;

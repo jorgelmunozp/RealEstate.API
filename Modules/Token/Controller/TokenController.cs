@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RealEstate.API.Infraestructure.Core.Logs;
-using RealEstate.API.Modules.Token.Service;
+using RealEstate.API.Infraestructure.Core.Services;
+using RealEstate.API.Modules.Token.Interface;
 
 namespace RealEstate.API.Modules.Token.Controller
 {
@@ -9,9 +9,9 @@ namespace RealEstate.API.Modules.Token.Controller
     [Route("api/[controller]")]
     public class TokenController : ControllerBase
     {
-        private readonly JwtService _jwtService;
+        private readonly IJwtService _jwtService;
 
-        public TokenController(JwtService jwtService)
+        public TokenController(IJwtService jwtService)
         {
             _jwtService = jwtService;
         }
@@ -25,14 +25,14 @@ namespace RealEstate.API.Modules.Token.Controller
         {
             try
             {
-                // ✅ El JwtService maneja toda la lógica (validación, usuario, tokens)
-                var result = await _jwtService.ProcessRefreshTokenAsync(Request.Headers["Authorization"].ToString());
+                var authHeader = Request.Headers["Authorization"].ToString();
+                var result = await _jwtService.ProcessRefreshTokenAsync(authHeader);
                 return StatusCode(result.StatusCode, result);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ServiceLogResponseWrapper<object>.Fail(
-                    $"Error al renovar token: {ex.Message}", statusCode: 500));
+                return StatusCode(500, ServiceResultWrapper<object>.Error(
+                    new Exception($"Error al renovar token: {ex.Message}")));
             }
         }
 
@@ -47,15 +47,16 @@ namespace RealEstate.API.Modules.Token.Controller
             {
                 var principal = _jwtService.ValidateToken(token);
                 if (principal == null)
-                    return Unauthorized(ServiceLogResponseWrapper<object>.Fail("Token inválido o expirado", statusCode: 401));
+                    return Unauthorized(ServiceResultWrapper<object>.Fail(
+                        "Token inválido o expirado", 401));
 
                 var claims = principal.Claims.ToDictionary(c => c.Type, c => c.Value);
-                return Ok(ServiceLogResponseWrapper<object>.Ok(claims, "Token válido", 200));
+                return Ok(ServiceResultWrapper<object>.Ok(claims, "Token válido"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ServiceLogResponseWrapper<object>.Fail(
-                    $"Error al validar token: {ex.Message}", statusCode: 500));
+                return StatusCode(500, ServiceResultWrapper<object>.Error(
+                    new Exception($"Error al validar token: {ex.Message}")));
             }
         }
     }

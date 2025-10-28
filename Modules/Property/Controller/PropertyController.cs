@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RealEstate.API.Modules.Property.Dto;
-using RealEstate.API.Modules.Property.Service;
+using RealEstate.API.Modules.Property.Interface;
 
 namespace RealEstate.API.Modules.Property.Controller
 {
@@ -9,9 +9,9 @@ namespace RealEstate.API.Modules.Property.Controller
     [Route("api/[controller]")]
     public class PropertyController : ControllerBase
     {
-        private readonly PropertyService _service;
+        private readonly IPropertyService _service;
 
-        public PropertyController(PropertyService service)
+        public PropertyController(IPropertyService service)
         {
             _service = service;
         }
@@ -54,7 +54,7 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Create([FromBody] PropertyDto dto)
         {
             if (dto == null)
-                return BadRequest(new { success = false, message = "El cuerpo de la solicitud no puede ser nulo." });
+                return BadRequest(new { Success = false, Message = "El cuerpo de la solicitud no puede ser nulo." });
 
             var result = await _service.CreateAsync(dto);
             return StatusCode(result.StatusCode, result);
@@ -68,7 +68,7 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
             if (string.IsNullOrWhiteSpace(id))
-                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
+                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio." });
 
             var result = await _service.UpdateAsync(id, dto);
             return StatusCode(result.StatusCode, result);
@@ -82,10 +82,10 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
             if (string.IsNullOrWhiteSpace(id))
-                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
+                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio." });
 
             if (fields == null || fields.Count == 0)
-                return BadRequest(new { success = false, message = "No se enviaron campos válidos para actualizar." });
+                return BadRequest(new { Success = false, Message = "No se enviaron campos válidos para actualizar." });
 
             var result = await _service.PatchAsync(id, fields);
             return StatusCode(result.StatusCode, result);
@@ -99,7 +99,7 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
-                return BadRequest(new { success = false, message = "El parámetro 'id' es obligatorio." });
+                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio." });
 
             var result = await _service.DeleteAsync(id);
             return StatusCode(result.StatusCode, result);

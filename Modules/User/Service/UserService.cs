@@ -5,11 +5,12 @@ using MongoDB.Bson;
 using AutoMapper;
 using RealEstate.API.Modules.User.Dto;
 using RealEstate.API.Modules.User.Model;
+using RealEstate.API.Modules.User.Interface;
 using RealEstate.API.Infraestructure.Core.Services;
 
 namespace RealEstate.API.Modules.User.Service
 {
-    public class UserService
+    public class UserService : IUserService  // Implementa IUserService
     {
         private readonly IMongoCollection<UserModel> _users;
         private readonly IValidator<UserDto> _validator;
@@ -33,58 +34,46 @@ namespace RealEstate.API.Modules.User.Service
                 : TimeSpan.FromMinutes(5);
         }
 
-        // ===========================================================
-        // 🔹 GET ALL
-        // ===========================================================
-        public async Task<List<UserDto>> GetAllAsync(bool refresh = false)
+        public async Task<ServiceResultWrapper<List<UserDto>>> GetAllAsync(bool refresh = false)
         {
             const string key = "user:all";
             if (!refresh && _cache.TryGetValue(key, out List<UserDto>? cached))
-                return cached!;
+                return ServiceResultWrapper<List<UserDto>>.Ok(cached!, "Usuarios obtenidos desde caché");
 
             var users = await _users.Find(_ => true).ToListAsync();
             var result = _mapper.Map<List<UserDto>>(users);
             _cache.Set(key, result, _cacheTtl);
-            return result;
+            return ServiceResultWrapper<List<UserDto>>.Ok(result, "Usuarios obtenidos correctamente");
         }
 
-        // ===========================================================
-        // 🔹 GET BY EMAIL
-        // ===========================================================
-        public async Task<UserDto?> GetByEmailAsync(string email, bool refresh = false)
+        public async Task<ServiceResultWrapper<UserDto?>> GetByEmailAsync(string email, bool refresh = false)
         {
-            if (string.IsNullOrWhiteSpace(email)) return null;
+            if (string.IsNullOrWhiteSpace(email)) return ServiceResultWrapper<UserDto?>.Fail("Email inválido");
 
             var key = $"user:email:{email}";
             if (!refresh && _cache.TryGetValue(key, out UserDto? cached))
-                return cached!;
+                return ServiceResultWrapper<UserDto?>.Ok(cached, "Usuario obtenido desde caché");
 
             var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
             var dto = _mapper.Map<UserDto>(user);
             if (dto != null) _cache.Set(key, dto, _cacheTtl);
-            return dto;
+            return ServiceResultWrapper<UserDto?>.Ok(dto, "Usuario obtenido correctamente");
         }
 
-        // ===========================================================
-        // 🔹 GET BY ID
-        // ===========================================================
-        public async Task<UserDto?> GetByIdAsync(string id, bool refresh = false)
+        public async Task<ServiceResultWrapper<UserDto?>> GetByIdAsync(string id, bool refresh = false)
         {
-            if (string.IsNullOrWhiteSpace(id)) return null;
+            if (string.IsNullOrWhiteSpace(id)) return ServiceResultWrapper<UserDto?>.Fail("ID inválido");
 
             var key = $"user:id:{id}";
             if (!refresh && _cache.TryGetValue(key, out UserDto? cached))
-                return cached!;
+                return ServiceResultWrapper<UserDto?>.Ok(cached, "Usuario obtenido desde caché");
 
             var user = await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
             var dto = _mapper.Map<UserDto>(user);
             if (dto != null) _cache.Set(key, dto, _cacheTtl);
-            return dto;
+            return ServiceResultWrapper<UserDto?>.Ok(dto, "Usuario obtenido correctamente");
         }
 
-        // ===========================================================
-        // 🔹 CREATE USER
-        // ===========================================================
         public async Task<ServiceResultWrapper<UserDto>> CreateUserAsync(UserDto user)
         {
             var validation = await _validator.ValidateAsync(user);
@@ -110,9 +99,6 @@ namespace RealEstate.API.Modules.User.Service
             );
         }
 
-        // ===========================================================
-        // 🔹 UPDATE USER
-        // ===========================================================
         public async Task<ServiceResultWrapper<UserDto>> UpdateUserAsync(string email, UserDto user, string requesterRole)
         {
             var existing = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
@@ -155,9 +141,6 @@ namespace RealEstate.API.Modules.User.Service
             );
         }
 
-        // ===========================================================
-        // 🔹 PATCH USER (seguro y compatible con JsonElement)
-        // ===========================================================
         public async Task<ServiceResultWrapper<UserDto>> PatchUserAsync(string email, Dictionary<string, object> fields, string requesterRole)
         {
             if (fields == null || fields.Count == 0)
@@ -184,7 +167,6 @@ namespace RealEstate.API.Modules.User.Service
 
                 if (prop == null) continue;
 
-                // ✅ Normaliza el valor (manejo seguro de JsonElement)
                 object? value = field.Value;
                 if (value is System.Text.Json.JsonElement jsonElement)
                 {
@@ -259,9 +241,6 @@ namespace RealEstate.API.Modules.User.Service
             );
         }
 
-        // ===========================================================
-        // 🔹 DELETE USER
-        // ===========================================================
         public async Task<ServiceResultWrapper<bool>> DeleteUserAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))

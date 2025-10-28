@@ -5,10 +5,11 @@ using MongoDB.Driver;
 using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Model;
+using RealEstate.API.Modules.PropertyImage.Interface;
 
 namespace RealEstate.API.Modules.PropertyImage.Service
 {
-    public class PropertyImageService
+    public class PropertyImageService : IPropertyImageService
     {
         private readonly IMongoCollection<PropertyImageModel> _images;
         private readonly IValidator<PropertyImageDto> _validator;

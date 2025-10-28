@@ -9,7 +9,6 @@ namespace RealEstate.API.Middleware
     /// Middleware global de manejo de errores.
     /// Captura excepciones no controladas, las registra en consola y logs estructurados,
     /// y devuelve una respuesta JSON unificada con el formato del ServiceResultWrapper.
-    /// </summary>
     public class ErrorHandlerMiddleware
     {
         private readonly RequestDelegate _next;
@@ -38,7 +37,7 @@ namespace RealEstate.API.Middleware
             // ------------------------------------------------------------
             // Determinar el tipo de excepción → código HTTP adecuado
             // ------------------------------------------------------------
-            var statusCode = ex switch
+            var StatusCode = ex switch
             {
                 UnauthorizedAccessException => HttpStatusCode.Unauthorized,
                 KeyNotFoundException => HttpStatusCode.NotFound,
@@ -53,7 +52,7 @@ namespace RealEstate.API.Middleware
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Write("[HALL] ");
             Console.ResetColor();
-            Console.WriteLine($"❌ Error global capturado: {ex.GetType().Name}");
+            Console.WriteLine($"StatusCode Error global capturado: {ex.GetType().Name}");
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"Mensaje: {ex.Message}");
             Console.WriteLine($"Ruta: {context.Request.Method} {context.Request.Path}");
@@ -64,15 +63,15 @@ namespace RealEstate.API.Middleware
             // ------------------------------------------------------------
             // Log estructurado con ILogger
             // ------------------------------------------------------------
-            _logger.LogError(ex, "❌ Error global: {Message}", ex.Message);
+            _logger.LogError(ex, "StatusCode Error global: {Message}", ex.Message);
 
             // ------------------------------------------------------------
             // Construir respuesta JSON uniforme
             // ------------------------------------------------------------
-            var response = ServiceResultWrapper<string>.Error(ex, (int)statusCode);
+            var response = ServiceResultWrapper<string>.Error(ex, (int)StatusCode);
 
             context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)statusCode;
+            context.Response.StatusCode = (int)StatusCode;
 
             var jsonOptions = new JsonSerializerOptions
             {
@@ -89,7 +88,7 @@ namespace RealEstate.API.Middleware
             // ------------------------------------------------------------
             _logger.LogInformation(
                 "[HALL] ErrorHandler => {StatusCode} {Method} {Path} ({ExceptionType})",
-                (int)statusCode,
+                (int)StatusCode,
                 context.Request.Method,
                 context.Request.Path,
                 ex.GetType().Name

@@ -6,10 +6,11 @@ using MongoDB.Driver;
 using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.Owner.Dto;
 using RealEstate.API.Modules.Owner.Model;
+using RealEstate.API.Modules.Owner.Interface;
 
 namespace RealEstate.API.Modules.Owner.Service
 {
-    public class OwnerService
+    public class OwnerService : IOwnerService
     {
         private readonly IMongoCollection<OwnerModel> _owners;
         private readonly IValidator<OwnerDto> _validator;

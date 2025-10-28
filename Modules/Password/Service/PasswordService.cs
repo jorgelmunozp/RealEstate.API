@@ -1,8 +1,10 @@
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using RealEstate.API.Infraestructure.Core.Services;
+using RealEstate.API.Modules.Password.Interface;
 using RealEstate.API.Modules.User.Model;
-using RealEstate.API.Modules.Token.Service;
-using RealEstate.API.Modules.User.Service;
+using RealEstate.API.Modules.Token.Interface;
+using RealEstate.API.Modules.User.Interface;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Mail;
@@ -11,13 +13,13 @@ using System.Text;
 
 namespace RealEstate.API.Modules.Password.Service
 {
-    public class PasswordService
+    public class PasswordService : IPasswordService
     {
         private readonly IMongoCollection<UserModel> _users;
         private readonly IConfiguration _config;
-        private readonly JwtService _jwtService;
+        private readonly IJwtService _jwtService;
 
-        public PasswordService(IMongoDatabase database, IConfiguration config, UserService userService)
+        public PasswordService(IMongoDatabase database, IConfiguration config, IJwtService jwtService)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
 
@@ -26,7 +28,7 @@ namespace RealEstate.API.Modules.Password.Service
                 throw new Exception("MONGO_COLLECTION_USER no definida");
 
             _users = database.GetCollection<UserModel>(collection);
-            _jwtService = new JwtService(config, userService);
+            _jwtService = jwtService;
         }
 
         private string? GetEnv(string key, string? fallback = null)
@@ -86,7 +88,7 @@ namespace RealEstate.API.Modules.Password.Service
 
             await client.SendMailAsync(msg);
 
-            return new { message = $"Enlace de recuperación enviado al correo {email}" };
+            return new { Message = $"Enlace de recuperación enviado al correo {email}" };
         }
 
         public object VerifyResetToken(string token)
@@ -104,27 +106,32 @@ namespace RealEstate.API.Modules.Password.Service
             if (string.IsNullOrWhiteSpace(id))
                 throw new InvalidOperationException("Token inválido.");
 
-            return new { message = "Token válido", id };
+            return new { Message = "Token válido", id };
         }
 
-        public async Task<object> UpdatePasswordById(string id, string newPassword)
+    public async Task<ServiceResultWrapper<string>> UpdatePasswordById(string id, string newPassword)
         {
             if (string.IsNullOrWhiteSpace(id))
-                throw new ArgumentException("El ID de usuario es requerido.");
-            if (string.IsNullOrWhiteSpace(newPassword))
-                throw new ArgumentException("La nueva contraseña es requerida.");
+                return ServiceResultWrapper<string>.Fail("El ID de usuario es requerido.");
 
+            if (string.IsNullOrWhiteSpace(newPassword))
+                return ServiceResultWrapper<string>.Fail("La nueva contraseña es requerida.");
+
+            // Buscar el usuario en la base de datos
             var user = await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
             if (user == null)
-                throw new InvalidOperationException("Usuario no encontrado.");
+                return ServiceResultWrapper<string>.Fail("Usuario no encontrado.");
 
+            // Hashear la nueva contraseña
             var hashed = BCrypt.Net.BCrypt.HashPassword(newPassword);
             var update = Builders<UserModel>.Update.Set(u => u.Password, hashed);
+
+            // Actualizar el usuario en la base de datos
             await _users.UpdateOneAsync(u => u.Id == id, update);
 
-            return new { message = "Contraseña actualizada exitosamente." };
+            // Retornar el resultado exitoso con un mensaje
+            return ServiceResultWrapper<string>.Ok("Contraseña actualizada exitosamente.");
         }
-
         private string GenerateResetToken(string id)
         {
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET"))

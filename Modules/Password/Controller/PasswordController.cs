@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Modules.Password.Dto;
-using RealEstate.API.Modules.Password.Service;
+using RealEstate.API.Modules.Password.Interface;
 using RealEstate.API.Modules.Token.Service;
 
 namespace RealEstate.API.Modules.Password.Controller
@@ -10,10 +10,10 @@ namespace RealEstate.API.Modules.Password.Controller
     [Route("api/[controller]")]
     public class PasswordController : ControllerBase
     {
-        private readonly PasswordService _passwordService;
+        private readonly IPasswordService _passwordService;
 
-        // ✅ Constructor con inyección de dependencias
-        public PasswordController(PasswordService passwordService)
+        // Constructor con inyección de dependencias
+        public PasswordController(IPasswordService passwordService)
         {
             _passwordService = passwordService;
         }
@@ -27,7 +27,7 @@ namespace RealEstate.API.Modules.Password.Controller
         public async Task<IActionResult> Recover([FromBody] PasswordRecoverDto dto)
         {
             if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
-                return BadRequest(new { message = "El correo electrónico es requerido." });
+                return BadRequest(new { Message = "El correo electrónico es requerido." });
 
             try
             {
@@ -36,7 +36,7 @@ namespace RealEstate.API.Modules.Password.Controller
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Error al enviar el correo: {ex.Message}" });
+                return StatusCode(500, new { Message = $"Error al enviar el correo: {ex.Message}" });
             }
         }
 
@@ -49,7 +49,7 @@ namespace RealEstate.API.Modules.Password.Controller
         public IActionResult VerifyToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
-                return BadRequest(new { message = "El token es requerido." });
+                return BadRequest(new { Message = "El token es requerido." });
 
             try
             {
@@ -58,7 +58,7 @@ namespace RealEstate.API.Modules.Password.Controller
             }
             catch (Exception ex)
             {
-                return Unauthorized(new { message = ex.Message });
+                return Unauthorized(new { Message = ex.Message });
             }
         }
 
@@ -71,11 +71,11 @@ namespace RealEstate.API.Modules.Password.Controller
         public async Task<IActionResult> Update([FromBody] PasswordUpdateDto dto)
         {
             if (dto == null || string.IsNullOrWhiteSpace(dto.Token) || string.IsNullOrWhiteSpace(dto.NewPassword))
-                return BadRequest(new { message = "El token y la nueva contraseña son requeridos." });
+                return BadRequest(new { Message = "El token y la nueva contraseña son requeridos." });
 
             try
             {
-                // ✅ Verificamos el token usando PasswordService (internamente usa JwtService)
+                // Verificamos el token usando PasswordService (internamente usa JwtService)
                 var verified = _passwordService.VerifyResetToken(dto.Token) as dynamic;
                 string id = verified.id;
 
@@ -84,11 +84,11 @@ namespace RealEstate.API.Modules.Password.Controller
             }
             catch (InvalidOperationException ex)
             {
-                return Unauthorized(new { message = ex.Message });
+                return Unauthorized(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Error al actualizar la contraseña: {ex.Message}" });
+                return StatusCode(500, new { Message = $"Error al actualizar la contraseña: {ex.Message}" });
             }
         }
     }

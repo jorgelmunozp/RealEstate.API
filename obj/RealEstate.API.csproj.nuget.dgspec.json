@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Apps\\Real estate app\\backend\\RealEstate.API\\RealEstate.API.csproj": {}
+    "D:\\Apps\\RealEstate\\RealEstate.API\\RealEstate.API.csproj": {}
   },
   "projects": {
-    "D:\\Apps\\Real estate app\\backend\\RealEstate.API\\RealEstate.API.csproj": {
+    "D:\\Apps\\RealEstate\\RealEstate.API\\RealEstate.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Apps\\Real estate app\\backend\\RealEstate.API\\RealEstate.API.csproj",
+        "projectUniqueName": "D:\\Apps\\RealEstate\\RealEstate.API\\RealEstate.API.csproj",
         "projectName": "RealEstate.API",
-        "projectPath": "D:\\Apps\\Real estate app\\backend\\RealEstate.API\\RealEstate.API.csproj",
+        "projectPath": "D:\\Apps\\RealEstate\\RealEstate.API\\RealEstate.API.csproj",
         "packagesPath": "C:\\Users\\jorge\\.nuget\\packages\\",
-        "outputPath": "D:\\Apps\\Real estate app\\backend\\RealEstate.API\\obj\\",
+        "outputPath": "D:\\Apps\\RealEstate\\RealEstate.API\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\jorge\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -56,6 +56,10 @@
               "target": "Package",
               "version": "[3.1.1, )"
             },
+            "FluentAssertions": {
+              "target": "Package",
+              "version": "[8.8.0, )"
+            },
             "FluentValidation.AspNetCore": {
               "target": "Package",
               "version": "[11.3.1, )"
@@ -79,6 +83,10 @@
             "MongoDB.Driver": {
               "target": "Package",
               "version": "[2.23.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.6, )"
             },
             "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",

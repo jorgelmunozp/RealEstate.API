@@ -1,9 +1,10 @@
 using MongoDB.Driver;
-using RealEstate.API.Modules.Token.Service;
+using RealEstate.API.Modules.Token.Interface;
 using RealEstate.API.Modules.Auth.Dto;
+using RealEstate.API.Modules.Auth.Interface;
 using RealEstate.API.Modules.User.Model;
 using RealEstate.API.Modules.User.Dto;
-using RealEstate.API.Modules.User.Service;
+using RealEstate.API.Modules.User.Interface;
 using RealEstate.API.Modules.User.Mapper;
 using RealEstate.API.Infraestructure.Core.Logs;
 using FluentValidation;
@@ -13,12 +14,12 @@ namespace RealEstate.API.Modules.Auth.Service
     public class AuthService : IAuthService
     {
         private readonly IMongoCollection<UserModel> _userCollection;
-        private readonly JwtService _jwtService;
+        private readonly IJwtService _jwtService;
         private readonly IValidator<LoginDto> _validator;
-        private readonly UserService _userService;
+        private readonly IUserService _userService;
         private readonly IConfiguration _config;
 
-        public AuthService(IMongoDatabase database, IConfiguration config, JwtService jwtService, IValidator<LoginDto> validator, UserService userService)
+        public AuthService(IMongoDatabase database, IConfiguration config, IJwtService jwtService, IValidator<LoginDto> validator, IUserService userService)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
@@ -33,7 +34,7 @@ namespace RealEstate.API.Modules.Auth.Service
         }
 
         // =========================================================
-        // 🔹 Helper: obtener variable de entorno o IConfiguration
+        // Helper: obtener variable de entorno o IConfiguration
         // =========================================================
         private string? GetEnv(string key, string? fallback = null)
         {
@@ -45,20 +46,20 @@ namespace RealEstate.API.Modules.Auth.Service
         }
 
         // =========================================================
-        // 🔹 LOGIN (autenticar usuario)
+        // LOGIN (autenticar usuario)
         // =========================================================
         public async Task<ServiceLogResponseWrapper<object>> LoginAsync(LoginDto loginDto)
         {
             var validationResult = await _validator.ValidateAsync(loginDto);
             if (!validationResult.IsValid)
             {
-                var errors = validationResult.Errors.Select(e => e.ErrorMessage);
-                return ServiceLogResponseWrapper<object>.Fail("Errores de validación", errors, 400);
+                var Errors = validationResult.Errors.Select(e => e.ErrorMessage);
+                return ServiceLogResponseWrapper<object>.Fail("Errores de validación", Errors, 400);
             }
 
             var user = await _userCollection.Find(u => u.Email == loginDto.Email).FirstOrDefaultAsync();
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
-                return ServiceLogResponseWrapper<object>.Fail("Usuario o contraseña incorrectos", statusCode: 401);
+                return ServiceLogResponseWrapper<object>.Fail("Usuario o contraseña incorrectos", StatusCode: 401);
 
             var tokens = _jwtService.GenerateTokens(user);
 
@@ -73,7 +74,7 @@ namespace RealEstate.API.Modules.Auth.Service
         }
 
         // =========================================================
-        // 🔹 REGISTER (crear usuario nuevo)
+        // REGISTER (crear usuario nuevo)
         // =========================================================
         public async Task<ServiceLogResponseWrapper<object>> RegisterAsync(UserDto userDto)
         {

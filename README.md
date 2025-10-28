@@ -146,7 +146,7 @@ RealEstate.API/
 
 - Casing JSON: camelCase en toda la API.
 - Respuestas de error (wrapper):
-  - Estructura: `{ success: false, statusCode, message, errors: string[], data: null }`.
+  - Estructura: `{ success: false, StatusCode, message, errors: string[], data: null }`.
   - Aplicado a errores globales, ModelState/binding, ValidationException y status sin cuerpo (404/405/415).
 - Respuestas de éxito:
   - Property: devuelve wrapper `{ success: true, statusCode, message, data, errors: [] }`.

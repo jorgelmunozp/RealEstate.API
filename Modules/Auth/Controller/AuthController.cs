@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RealEstate.API.Modules.Auth.Service;
+using RealEstate.API.Modules.Auth.Interface;
 using RealEstate.API.Modules.Auth.Dto;
 using RealEstate.API.Modules.User.Dto;
 
@@ -17,7 +18,7 @@ namespace RealEstate.API.Modules.Auth.Controller
         }
 
         // ===========================================================
-        // 🔹 POST: /api/auth/login
+        // POST: /api/auth/login
         // ===========================================================
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -40,7 +41,7 @@ namespace RealEstate.API.Modules.Auth.Controller
         }
 
         // ===========================================================
-        // 🔹 POST: /api/auth/register
+        // POST: /api/auth/register
         // ===========================================================
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserDto dto)
