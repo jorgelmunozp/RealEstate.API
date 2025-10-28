@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
+using System.IdentityModel.Tokens.Jwt;
 
 // Core
 using RealEstate.API.Middleware;
@@ -55,6 +56,10 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
+
+// Evita el remapeo automático de claims (sub → nameidentifier)
+JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
 var config = builder.Configuration;
 
 // ===========================================================
@@ -62,28 +67,22 @@ var config = builder.Configuration;
 // ===========================================================
 var mongoConnection = config["MONGO_CONNECTION"] ?? "mongodb://localhost:27017";
 var mongoDatabase = config["MONGO_DATABASE"] ?? "RealEstate";
-
-if (string.IsNullOrWhiteSpace(mongoConnection))
-    throw new InvalidOperationException("La variable MONGO_CONNECTION no puede ser nula o vacía.");
-if (string.IsNullOrWhiteSpace(mongoDatabase))
-    throw new InvalidOperationException("La variable MONGO_DATABASE no puede ser nula o vacía.");
-
+if (string.IsNullOrWhiteSpace(mongoConnection)) throw new InvalidOperationException("La variable MONGO_CONNECTION no puede ser nula o vacía.");
+if (string.IsNullOrWhiteSpace(mongoDatabase)) throw new InvalidOperationException("La variable MONGO_DATABASE no puede ser nula o vacía.");
 Console.WriteLine($"[MongoDB] Conexión: {mongoConnection}");
 Console.WriteLine($"[MongoDB] Base de datos: {mongoDatabase}");
-
 builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnection));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDatabase));
 
 // ===========================================================
 // JSON GLOBAL (camelCase + case-insensitive)
 // ===========================================================
-builder.Services.AddControllers()
-    .AddJsonOptions(o =>
-    {
-        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-        o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-        o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-    });
+builder.Services.AddControllers().AddJsonOptions(o =>
+{
+    o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
 // ===========================================================
 // JWT CONFIG (desde entorno)
@@ -93,7 +92,6 @@ var issuer = config["JWT_ISSUER"] ?? "RealEstateAPI";
 var audience = config["JWT_AUDIENCE"] ?? "UsuariosAPI";
 var expiryMinutes = config["JWT_EXPIRY_MINUTES"] ?? "60";
 var refreshDays = config["JWT_REFRESH_DAYS"] ?? "7";
-
 builder.Configuration["JwtSettings:SecretKey"] = secretKey;
 builder.Configuration["JwtSettings:Issuer"] = issuer;
 builder.Configuration["JwtSettings:Audience"] = audience;
@@ -103,34 +101,19 @@ builder.Configuration["JwtSettings:RefreshDays"] = refreshDays;
 // ===========================================================
 // VALIDACIÓN GLOBAL (FluentValidation + Wrapper uniforme)
 // ===========================================================
-builder.Services.AddFluentValidationAutoValidation()
-                .AddFluentValidationClientsideAdapters();
+builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped);
-
-// Nombres de propiedades camelCase en validaciones
 FluentValidation.ValidatorOptions.Global.PropertyNameResolver = (type, member, expr) =>
 {
     var name = member?.Name ?? expr?.ToString()?.Split('.').LastOrDefault();
     return string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
 };
-
-// Respuesta uniforme para errores de validación
 builder.Services.Configure<ApiBehaviorOptions>(opt =>
 {
     opt.InvalidModelStateResponseFactory = ctx =>
     {
-        var Errors = ctx.ModelState
-            .Where(x => x.Value?.Errors.Count > 0)
-            .SelectMany(v => v.Value!.Errors)
-            .Select(e => e.ErrorMessage)
-            .ToArray();
-
-        var payload = ServiceResultWrapper<object>.Fail(
-            Errors,
-            statusCode: 400,
-            message: "Errores de validación"
-        );
-
+        var Errors = ctx.ModelState.Where(x => x.Value?.Errors.Count > 0).SelectMany(v => v.Value!.Errors).Select(e => e.ErrorMessage).ToArray();
+        var payload = ServiceResultWrapper<object>.Fail(Errors, statusCode: 400, message: "Errores de validación");
         return new BadRequestObjectResult(payload);
     };
 });
@@ -149,33 +132,26 @@ builder.Services.AddSwaggerGen();
 // ===========================================================
 // INYECCIÓN DE DEPENDENCIAS (Servicios / Validadores)
 // ===========================================================
-
 // Auth / Token / Password
 builder.Services.AddScoped<IValidator<LoginDto>, LoginDtoValidator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
-
 // User
 builder.Services.AddScoped<IValidator<UserDto>, UserDtoValidator>();
 builder.Services.AddScoped<IUserService, UserService>();
-
 // Owner
 builder.Services.AddScoped<IValidator<OwnerDto>, OwnerDtoValidator>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
-
-// PropertyImage(antes de PropertyService)
+// PropertyImage (antes de PropertyService)
 builder.Services.AddScoped<IValidator<PropertyImageDto>, PropertyImageDtoValidator>();
 builder.Services.AddScoped<IPropertyImageService, PropertyImageService>();
-
 // PropertyTrace (antes de PropertyService)
 builder.Services.AddScoped<IValidator<PropertyTraceDto>, PropertyTraceDtoValidator>();
 builder.Services.AddScoped<IPropertyTraceService, PropertyTraceService>();
-
 // Property principal
 builder.Services.AddScoped<IValidator<PropertyDto>, PropertyDtoValidator>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
-// builder.Services.AddScoped<PropertyService>();
 
 // ===========================================================
 // AUTOMAPPER (perfil de mapeos globales)
@@ -187,10 +163,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 // ===========================================================
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    opt.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 // ===========================================================
@@ -204,6 +177,9 @@ builder.Services.AddAuthentication(opt =>
 })
 .AddJwtBearer(opt =>
 {
+    // Evita que ASP.NET Core remapee los claims (p.ej., "sub" → NameIdentifier)
+    opt.MapInboundClaims = false;
+
     opt.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
@@ -216,7 +192,6 @@ builder.Services.AddAuthentication(opt =>
         ClockSkew = TimeSpan.Zero
     };
 });
-
 builder.Services.AddAuthorization();
 
 // ===========================================================
@@ -247,14 +222,10 @@ app.UseAuthorization();
 // ===========================================================
 // STATUS CODE PAGES (respuestas JSON unificadas)
 // ===========================================================
-// ===========================================================
-// STATUS CODE PAGES (respuestas JSON unificadas)
-// ===========================================================
 app.UseStatusCodePages(async context =>
 {
-    var res = context.HttpContext.Response;   // se usa el context del delegado
-    var code = res.StatusCode;                // propiedad correcta
-
+    var res = context.HttpContext.Response;
+    var code = res.StatusCode;
     var msg = code switch
     {
         401 => "No autorizado",
@@ -262,26 +233,18 @@ app.UseStatusCodePages(async context =>
         404 => "Recurso no encontrado",
         405 => "Método no permitido",
         415 => "Tipo de contenido no soportado",
-        _   => "Error inesperado"
+        _ => "Error inesperado"
     };
-
     var payload = ServiceResultWrapper<string>.Fail(msg, code);
-
     res.ContentType = "application/json; charset=utf-8";
-
-    var json = System.Text.Json.JsonSerializer.Serialize(
-        payload,
-        new System.Text.Json.JsonSerializerOptions
-        {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            WriteIndented = true
-        }
-    );
-
+    var json = System.Text.Json.JsonSerializer.Serialize(payload, new System.Text.Json.JsonSerializerOptions
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = true
+    });
     await res.WriteAsync(json);
 });
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -289,7 +252,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "RealEstate API v1");
-        c.RoutePrefix = "swagger"; // URL: /swagger
+        c.RoutePrefix = "swagger";
     });
 }
 
