@@ -61,9 +61,7 @@ namespace RealEstate.API.Modules.Property.Service
                 : TimeSpan.FromMinutes(5);
         }
 
-        // ===========================================================
         // GET (con filtros, paginación y caché)
-        // ===========================================================
         public async Task<ServiceResultWrapper<object>> GetCachedAsync(
             string? name, string? address, string? idOwner,
             long? minPrice, long? maxPrice, int page = 1, int limit = 6, bool refresh = false)
@@ -100,9 +98,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // GET BY ID
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyDto>> GetByIdAsync(string id)
         {
             try
@@ -139,9 +135,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // CREATE
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyDto>> CreateAsync(PropertyDto dto)
         {
             try
@@ -191,9 +185,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // UPDATE (PUT)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyDto>> UpdateAsync(string id, PropertyDto dto)
         {
             try
@@ -265,9 +257,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // PATCH (modular, delegando a servicios)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
             try
@@ -291,17 +281,17 @@ namespace RealEstate.API.Modules.Property.Service
                     }
                 }
 
-                if (updates.Any())
+                if (updates.Count != 0)
                     await _properties.UpdateOneAsync(p => p.Id == id, builder.Combine(updates));
 
-                if (fields.ContainsKey("owner"))
-                    await JsonHelper.ProcessOwnerPatchAsync(fields["owner"], existing.IdOwner, id, _ownerService, _properties);
+                if (fields.TryGetValue("owner", out object? valueOwner))
+                    await JsonHelper.ProcessOwnerPatchAsync(valueOwner, existing.IdOwner, id, _ownerService, _properties);
 
-                if (fields.ContainsKey("image"))
-                    await JsonHelper.ProcessImagePatchAsync(fields["image"], id, _imageService);
+                if (fields.TryGetValue("image", out object? valueImage))
+                    await JsonHelper.ProcessImagePatchAsync(valueImage, id, _imageService);
 
-                if (fields.ContainsKey("traces"))
-                    await JsonHelper.ProcessTracesPatchAsync(fields["traces"], id, _traceService);
+                if (fields.TryGetValue("traces", out object? valueTraces))
+                    await JsonHelper.ProcessTracesPatchAsync(valueTraces, id, _traceService);
 
                 var updated = await GetByIdAsync(id);
                 return ServiceResultWrapper<PropertyDto>.Updated(updated.Data, "Propiedad actualizada parcialmente");
@@ -312,9 +302,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // DELETE
-        // ===========================================================
         public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
             try
@@ -336,9 +324,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // ===========================================================
         // Helper: consulta completa
-        // ===========================================================
         private async Task<(List<PropertyDto> Data, long TotalItems)> GetAllWithMetaAsync( string? name, string? address, string? idOwner, long? minPrice, long? maxPrice, int page, int limit)
         {
             var fb = Builders<PropertyModel>.Filter;
@@ -379,9 +365,7 @@ namespace RealEstate.API.Modules.Property.Service
             return (dtoList.ToList(), totalItems);
         }
 
-        // ===========================================================
         // Helper interno para JSON
-        // ===========================================================
         private static class JsonHelper
         {
             public static object? NormalizeValue(object? value)
@@ -440,13 +424,15 @@ namespace RealEstate.API.Modules.Property.Service
 
                 var imageDto = JsonSerializer.Deserialize<PropertyImageDto>(JsonSerializer.Serialize(imageDict));
                 if (imageDto == null) return;
+                imageDto.IdProperty = propertyId;
 
                 var existingImage = await imageService.GetByPropertyIdAsync(propertyId);
                 if (existingImage != null)
+                {
                     await imageService.UpdateAsync(existingImage.IdPropertyImage!, imageDto);
+                }
                 else
                 {
-                    imageDto.IdProperty = propertyId;
                     await imageService.CreateAsync(imageDto);
                 }
             }

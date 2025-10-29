@@ -6,9 +6,7 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
 {
     public static class PropertyImageMapper
     {
-        // ===========================================================
         // Model → DTO
-        // ===========================================================
         public static PropertyImageDto ToDto(this PropertyImageModel model)
         {
             if (model == null) return new PropertyImageDto();
@@ -22,9 +20,7 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
             };
         }
 
-        // ===========================================================
         // DTO → Model
-        // ===========================================================
         public static PropertyImageModel ToModel(this PropertyImageDto dto)
         {
             if (dto == null) return new PropertyImageModel();
@@ -43,18 +39,14 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
             };
         }
 
-        // ===========================================================
         // IEnumerable<Model> → List<DTO>
-        // ===========================================================
         public static List<PropertyImageDto> ToDtoList(IEnumerable<PropertyImageModel>? models)
         {
             if (models == null) return new List<PropertyImageDto>();
             return models.Select(ToDto).ToList();
         }
 
-        // ===========================================================
         // IEnumerable<DTO> → List<Model>
-        // ===========================================================
         public static List<PropertyImageModel> ToModelList(IEnumerable<PropertyImageDto>? dtos)
         {
             if (dtos == null) return new List<PropertyImageModel>();

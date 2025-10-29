@@ -33,9 +33,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
                 : TimeSpan.FromMinutes(5);
         }
 
-        // ===========================================================
         // GET ALL (con filtro opcional por propiedad y caché)
-        // ===========================================================
         public async Task<ServiceResultWrapper<IEnumerable<PropertyTraceDto>>> GetAllAsync(string? idProperty = null, bool refresh = false)
         {
             var cacheKey = $"ptrace:{idProperty ?? "all"}";
@@ -53,9 +51,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<IEnumerable<PropertyTraceDto>>.Ok(result, "Listado de trazas obtenido correctamente");
         }
 
-        // ===========================================================
         // GET BY ID
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyTraceDto>> GetByIdAsync(string id)
         {
             var trace = await _traces.Find(t => t.Id == id).FirstOrDefaultAsync();
@@ -65,9 +61,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<PropertyTraceDto>.Ok(_mapper.Map<PropertyTraceDto>(trace), "Traza obtenida correctamente");
         }
 
-        // ===========================================================
         // CREATE (una o varias trazas)
-        // ===========================================================
         public async Task<ServiceResultWrapper<List<string>>> CreateAsync(IEnumerable<PropertyTraceDto> traces)
         {
             var ids = new List<string>();
@@ -93,9 +87,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<List<string>>.Created(ids, "Trazas creadas correctamente");
         }
 
-        // ===========================================================
         // CREATE (una sola traza)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyTraceDto>> CreateSingleAsync(PropertyTraceDto trace)
         {
             var validation = await _validator.ValidateAsync(trace);
@@ -108,9 +100,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<PropertyTraceDto>.Created(_mapper.Map<PropertyTraceDto>(model), "Traza creada correctamente");
         }
 
-        // ===========================================================
         // UPDATE (PUT)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyTraceDto>> UpdateAsync(string id, PropertyTraceDto trace)
         {
             var validation = await _validator.ValidateAsync(trace);
@@ -127,9 +117,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<PropertyTraceDto>.Updated(_mapper.Map<PropertyTraceDto>(updatedModel), "Traza actualizada correctamente");
         }
 
-        // ===========================================================
         // PATCH (actualización parcial)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyTraceDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)
@@ -157,9 +145,7 @@ namespace RealEstate.API.Modules.PropertyTrace.Service
             return ServiceResultWrapper<PropertyTraceDto>.Updated(_mapper.Map<PropertyTraceDto>(updated), "Traza actualizada parcialmente");
         }
 
-        // ===========================================================
         // DELETE
-        // ===========================================================
         public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
             var result = await _traces.DeleteOneAsync(t => t.Id == id);

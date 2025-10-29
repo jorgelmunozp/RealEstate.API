@@ -20,20 +20,16 @@ namespace RealEstate.API.Modules.User.Controller
             _service = service;
         }
 
-        // ===========================================================
-        // Helper: obtener rol y correo actual desde JWT
-        // ===========================================================
-        private (string role, string email) GetRequesterDetails()
+              // Helper: obtener rol y correo actual desde JWT
+              private (string role, string email) GetRequesterDetails()
         {
             var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? "user";
             var emailClaim = User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
             return (roleClaim.ToLower(), emailClaim);
         }
 
-        // ===========================================================
-        // GET: api/user
-        // ===========================================================
-        [HttpGet]
+              // GET: api/user
+              [HttpGet]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetAll([FromQuery] bool refresh = false)
         {
@@ -41,20 +37,16 @@ namespace RealEstate.API.Modules.User.Controller
             return result.Success ? Ok(result.Data) : StatusCode(result.StatusCode, new { Message = result.Message, Errors = result.Errors });
         }
 
-        // ===========================================================
-        // GET: api/user/{email}
-        // ===========================================================
-        [HttpGet("{email}")]
+              // GET: api/user/{email}
+              [HttpGet("{email}")]
         public async Task<IActionResult> GetByEmail(string email, [FromQuery] bool refresh = false)
         {
             var result = await _service.GetByEmailAsync(email, refresh);
             return result.Success ? Ok(result.Data) : StatusCode(result.StatusCode, new { Message = result.Message });
         }
 
-        // ===========================================================
-        // POST: api/user
-        // ===========================================================
-        [HttpPost]
+              // POST: api/user
+              [HttpPost]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Create([FromBody] UserDto user)
         {
@@ -65,10 +57,8 @@ namespace RealEstate.API.Modules.User.Controller
             return result.Success ? CreatedAtAction(nameof(GetByEmail), new { email = result.Data.Email }, result.Data) : StatusCode(result.StatusCode, new { Message = result.Message, Errors = result.Errors });
         }
 
-        // ===========================================================
-        // PUT: api/user/{email}
-        // ===========================================================
-        [HttpPut("{email}")]
+              // PUT: api/user/{email}
+              [HttpPut("{email}")]
         [Authorize(Roles = "user,editor,admin")]
         public async Task<IActionResult> Update(string email, [FromBody] UserDto user)
         {
@@ -87,10 +77,8 @@ namespace RealEstate.API.Modules.User.Controller
             };
         }
 
-        // ===========================================================
-        // PATCH: api/user/{email}
-        // ===========================================================
-        [HttpPatch("{email}")]
+              // PATCH: api/user/{email}
+              [HttpPatch("{email}")]
         [Authorize(Roles = "user,editor,admin")]
         public async Task<IActionResult> Patch(string email, [FromBody] Dictionary<string, object> fields)
         {
@@ -109,10 +97,8 @@ namespace RealEstate.API.Modules.User.Controller
             };
         }
 
-        // ===========================================================
-        // DELETE: api/user/{email}
-        // ===========================================================
-        [HttpDelete("{email}")]
+              // DELETE: api/user/{email}
+              [HttpDelete("{email}")]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string email)
         {

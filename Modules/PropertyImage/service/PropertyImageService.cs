@@ -6,6 +6,7 @@ using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Model;
 using RealEstate.API.Modules.PropertyImage.Interface;
+using RealEstate.API.Modules.PropertyImage.Mapper;
 
 namespace RealEstate.API.Modules.PropertyImage.Service
 {
@@ -33,9 +34,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
                 : TimeSpan.FromMinutes(5);
         }
 
-        // ===========================================================
         // GET ALL (con filtros, paginación y caché)
-        // ===========================================================
         public async Task<ServiceResultWrapper<IEnumerable<PropertyImageDto>>> GetAllAsync(
             string? idProperty = null,
             bool? enabled = null,
@@ -67,9 +66,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             return ServiceResultWrapper<IEnumerable<PropertyImageDto>>.Ok(result, "Listado de imágenes obtenido correctamente");
         }
 
-        // ===========================================================
         // GET BY ID
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyImageDto>> GetByIdAsync(string idPropertyImage)
         {
             var image = await _images.Find(p => p.Id == idPropertyImage).FirstOrDefaultAsync();
@@ -79,18 +76,15 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             return ServiceResultWrapper<PropertyImageDto>.Ok(_mapper.Map<PropertyImageDto>(image), "Imagen obtenida correctamente");
         }
 
-        // ===========================================================
         // GET BY PROPERTY ID
-        // ===========================================================
         public async Task<PropertyImageDto?> GetByPropertyIdAsync(string propertyId)
         {
             var image = await _images.Find(i => i.IdProperty == propertyId).FirstOrDefaultAsync();
-            return image != null ? _mapper.Map<PropertyImageDto>(image) : null;
+            // return image != null ? _mapper.Map<PropertyImageDto>(image) : null;
+            return image?.ToDto();
         }
-
-        // ===========================================================
+        
         // CREATE
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyImageDto>> CreateAsync(PropertyImageDto image)
         {
             if (image == null)
@@ -120,9 +114,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             return ServiceResultWrapper<PropertyImageDto>.Created(_mapper.Map<PropertyImageDto>(model), "Imagen creada correctamente");
         }
 
-        // ===========================================================
         // UPDATE (PUT)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyImageDto>> UpdateAsync(string idPropertyImage, PropertyImageDto image)
         {
             image.IdPropertyImage = idPropertyImage;
@@ -141,9 +133,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             return ServiceResultWrapper<PropertyImageDto>.Updated(_mapper.Map<PropertyImageDto>(updatedModel), "Imagen actualizada correctamente");
         }
 
-        // ===========================================================
         // PATCH (actualización parcial)
-        // ===========================================================
         public async Task<ServiceResultWrapper<PropertyImageDto>> PatchAsync(string idPropertyImage, Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)
@@ -171,9 +161,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
             return ServiceResultWrapper<PropertyImageDto>.Updated(_mapper.Map<PropertyImageDto>(updated), "Imagen actualizada parcialmente");
         }
 
-        // ===========================================================
         // DELETE
-        // ===========================================================
         public async Task<ServiceResultWrapper<bool>> DeleteAsync(string idPropertyImage)
         {
             var result = await _images.DeleteOneAsync(p => p.Id == idPropertyImage);

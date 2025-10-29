@@ -209,6 +209,34 @@ builder.Logging.AddSimpleConsole(o =>
 // ===========================================================
 var app = builder.Build();
 
+
+// ===========================================================
+// STATUS CODE PAGES (respuestas JSON unificadas)
+// ===========================================================
+// app.UseStatusCodePages(async context =>
+// {
+//     var res = context.HttpContext.Response;
+//     var code = res.StatusCode;
+//     var msg = code switch
+//     {
+//         401 => "No autorizado",
+//         403 => "Prohibido",
+//         404 => "Recurso no encontrado",
+//         405 => "Método no permitido",
+//         415 => "Tipo de contenido no soportado",
+//         _ => "Error inesperado"
+//     };
+//     var payload = ServiceResultWrapper<string>.Fail(msg, code);
+//     res.ContentType = "application/json; charset=utf-8";
+//     var json = System.Text.Json.JsonSerializer.Serialize(payload, new System.Text.Json.JsonSerializerOptions
+//     {
+//         PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+//         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+//         WriteIndented = true
+//     });
+//     await res.WriteAsync(json);
+// });
+
 // Orden recomendado
 app.UseMiddleware<LoggingMiddleware>();
 app.UseMiddleware<ErrorHandlerMiddleware>();
@@ -218,33 +246,6 @@ app.UseRouting();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
-
-// ===========================================================
-// STATUS CODE PAGES (respuestas JSON unificadas)
-// ===========================================================
-app.UseStatusCodePages(async context =>
-{
-    var res = context.HttpContext.Response;
-    var code = res.StatusCode;
-    var msg = code switch
-    {
-        401 => "No autorizado",
-        403 => "Prohibido",
-        404 => "Recurso no encontrado",
-        405 => "Método no permitido",
-        415 => "Tipo de contenido no soportado",
-        _ => "Error inesperado"
-    };
-    var payload = ServiceResultWrapper<string>.Fail(msg, code);
-    res.ContentType = "application/json; charset=utf-8";
-    var json = System.Text.Json.JsonSerializer.Serialize(payload, new System.Text.Json.JsonSerializerOptions
-    {
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        WriteIndented = true
-    });
-    await res.WriteAsync(json);
-});
 
 if (app.Environment.IsDevelopment())
 {

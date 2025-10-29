@@ -30,10 +30,8 @@ namespace RealEstate.API.Modules.Property.Model
         [BsonElement("IdOwner")]
         public string IdOwner { get; set; } = string.Empty;
 
-        // ===========================================================
-        // Campo virtual (no se guarda en la base de datos)
-        // ===========================================================
-        [BsonIgnore]
+              // Campo virtual (no se guarda en la base de datos)
+              [BsonIgnore]
         public OwnerDto? Owner { get; set; }
         [BsonIgnore]
         public PropertyImageDto? Image { get; set; }

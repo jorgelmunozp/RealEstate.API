@@ -188,7 +188,7 @@ JWT_AUDIENCE=UsuariosAPI
 JWT_EXPIRY_MINUTES=60
 
 # Frontend (dev)
-FRONTEND_URL=http://localhost:3001
+FRONTEND_URL=http://localhost:3000
 
 # Caché (minutos)
 CACHE_TTL_MINUTES=5

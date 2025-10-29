@@ -34,10 +34,8 @@ namespace RealEstate.API.Modules.Owner.Service
                 : TimeSpan.FromMinutes(5);
         }
 
-        // ===========================================================
-        // GET (con filtros opcionales y caché)
-        // ===========================================================
-        public async Task<ServiceResultWrapper<List<OwnerDto>>> GetAsync(string? name = null, string? address = null, bool refresh = false)
+              // GET (con filtros opcionales y caché)
+              public async Task<ServiceResultWrapper<List<OwnerDto>>> GetAsync(string? name = null, string? address = null, bool refresh = false)
         {
             var cacheKey = $"owner:{name}-{address}";
             if (!refresh && _cache.TryGetValue(cacheKey, out List<OwnerDto>? cached))
@@ -59,10 +57,8 @@ namespace RealEstate.API.Modules.Owner.Service
             return ServiceResultWrapper<List<OwnerDto>>.Ok(result, "Propietarios obtenidos correctamente");
         }
 
-        // ===========================================================
-        // GET BY ID
-        // ===========================================================
-        public async Task<ServiceResultWrapper<OwnerDto>> GetByIdAsync(string id)
+              // GET BY ID
+              public async Task<ServiceResultWrapper<OwnerDto>> GetByIdAsync(string id)
         {
             var owner = await _owners.Find(o => o.Id == id).FirstOrDefaultAsync();
             if (owner == null)
@@ -71,10 +67,8 @@ namespace RealEstate.API.Modules.Owner.Service
             return ServiceResultWrapper<OwnerDto>.Ok(_mapper.Map<OwnerDto>(owner), "Propietario obtenido correctamente");
         }
 
-        // ===========================================================
-        // CREATE
-        // ===========================================================
-        public async Task<ServiceResultWrapper<OwnerDto>> CreateAsync(OwnerDto owner)
+              // CREATE
+              public async Task<ServiceResultWrapper<OwnerDto>> CreateAsync(OwnerDto owner)
         {
             var validation = await _validator.ValidateAsync(owner);
             if (!validation.IsValid)
@@ -87,10 +81,8 @@ namespace RealEstate.API.Modules.Owner.Service
             return ServiceResultWrapper<OwnerDto>.Created(_mapper.Map<OwnerDto>(model), "Propietario creado correctamente");
         }
 
-        // ===========================================================
-        // UPDATE (PUT)
-        // ===========================================================
-        public async Task<ServiceResultWrapper<OwnerDto>> UpdateAsync(string id, OwnerDto owner)
+              // UPDATE (PUT)
+              public async Task<ServiceResultWrapper<OwnerDto>> UpdateAsync(string id, OwnerDto owner)
         {
             var validation = await _validator.ValidateAsync(owner);
             if (!validation.IsValid)
@@ -109,10 +101,8 @@ namespace RealEstate.API.Modules.Owner.Service
             return ServiceResultWrapper<OwnerDto>.Updated(_mapper.Map<OwnerDto>(updatedModel), "Propietario actualizado correctamente");
         }
 
-        // ===========================================================
-        // PATCH (actualización parcial)
-        // ===========================================================
-        public async Task<ServiceResultWrapper<OwnerDto>> PatchAsync(string id, Dictionary<string, object> fields)
+              // PATCH (actualización parcial)
+              public async Task<ServiceResultWrapper<OwnerDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
             if (fields == null || fields.Count == 0)
                 return ServiceResultWrapper<OwnerDto>.Fail("No se enviaron campos válidos para actualizar", 400);
@@ -147,13 +137,11 @@ namespace RealEstate.API.Modules.Owner.Service
             _cache.Remove("owner:all");
             _cache.Remove($"owner:{id}");
 
-            return ServiceResultWrapper<OwnerDto>.Updated(_mapper.Map<OwnerDto>(updated), "Propietario actualizado parcialmente");
+            return ServiceResultWrapper<OwnerDto>.Updated(_mapper.Map<OwnerDto>(updated), "Propietario actualizado");
         }
 
-        // ===========================================================
-        // DELETE
-        // ===========================================================
-        public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
+              // DELETE
+              public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
             var result = await _owners.DeleteOneAsync(o => o.Id == id);
             if (result.DeletedCount == 0)

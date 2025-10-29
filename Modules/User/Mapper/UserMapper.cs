@@ -6,10 +6,8 @@ namespace RealEstate.API.Modules.User.Mapper
 {
     public static class UserMapper
     {
-        // ===========================================================
-        // Model → DTO
-        // ===========================================================
-        public static UserDto ToDto(this UserModel model)
+              // Model → DTO
+              public static UserDto ToDto(this UserModel model)
         {
             if (model == null) return new UserDto();
 
@@ -27,10 +25,8 @@ namespace RealEstate.API.Modules.User.Mapper
         public static List<UserDto> ToDtoList(IEnumerable<UserModel>? models) =>
             models?.Select(m => m.ToDto()).ToList() ?? new List<UserDto>();
 
-        // ===========================================================
-        // DTO → Model
-        // ===========================================================
-        public static UserModel ToModel(this UserDto dto)
+              // DTO → Model
+              public static UserModel ToModel(this UserDto dto)
         {
             if (dto == null) return new UserModel();
 

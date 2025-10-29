@@ -16,9 +16,7 @@ namespace RealEstate.API.Modules.Property.Controller
             _service = service;
         }
 
-        // ===========================================================
         // GET: api/property
-        // ===========================================================
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAll(
@@ -35,9 +33,7 @@ namespace RealEstate.API.Modules.Property.Controller
             return StatusCode(result.StatusCode, result);
         }
 
-        // ===========================================================
         // GET: api/property/{id}
-        // ===========================================================
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(string id)
@@ -46,9 +42,7 @@ namespace RealEstate.API.Modules.Property.Controller
             return StatusCode(result.StatusCode, result);
         }
 
-        // ===========================================================
         // POST: api/property
-        // ===========================================================
         [HttpPost]
         [Authorize(Roles = "user,editor,admin")]
         public async Task<IActionResult> Create([FromBody] PropertyDto dto)
@@ -60,9 +54,7 @@ namespace RealEstate.API.Modules.Property.Controller
             return StatusCode(result.StatusCode, result);
         }
 
-        // ===========================================================
         // PUT: api/property/{id}
-        // ===========================================================
         [HttpPut("{id}")]
         [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
@@ -74,9 +66,7 @@ namespace RealEstate.API.Modules.Property.Controller
             return StatusCode(result.StatusCode, result);
         }
 
-        // ===========================================================
         // PATCH: api/property/{id}
-        // ===========================================================
         [HttpPatch("{id}")]
         [Authorize(Roles = "editor,admin")]
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
@@ -91,9 +81,7 @@ namespace RealEstate.API.Modules.Property.Controller
             return StatusCode(result.StatusCode, result);
         }
 
-        // ===========================================================
         // DELETE: api/property/{id}
-        // ===========================================================
         [HttpDelete("{id}")]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> Delete(string id)

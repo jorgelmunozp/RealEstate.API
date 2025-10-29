@@ -6,14 +6,10 @@ namespace RealEstate.API.Modules.Auth.Interface
 {
     public interface IAuthService
     {
-        // ===========================================================
-        // LOGIN: Autenticación de usuario
-        // ===========================================================
-        Task<ServiceLogResponseWrapper<object>> LoginAsync(LoginDto loginDto);
+              // LOGIN: Autenticación de usuario
+              Task<ServiceLogResponseWrapper<object>> LoginAsync(LoginDto loginDto);
 
-        // ===========================================================
-        // REGISTER: Registro de nuevo usuario
-        // ===========================================================
-        Task<ServiceLogResponseWrapper<object>> RegisterAsync(UserDto userDto);
+              // REGISTER: Registro de nuevo usuario
+              Task<ServiceLogResponseWrapper<object>> RegisterAsync(UserDto userDto);
     }
 }

@@ -7,10 +7,8 @@ namespace RealEstate.API.Modules.Property.Mapper
 {
     public static class PropertyMapper
     {
-        // ===========================================================
-        // Model → DTO
-        // ===========================================================
-        public static PropertyDto ToDto(this PropertyModel model)
+              // Model → DTO
+              public static PropertyDto ToDto(this PropertyModel model)
         {
             if (model == null) return new PropertyDto();
 
@@ -39,10 +37,8 @@ namespace RealEstate.API.Modules.Property.Mapper
         public static List<PropertyDto> ToDtoList(IEnumerable<PropertyModel> models)
             => models?.Select(ToDto).ToList() ?? new List<PropertyDto>();
 
-        // ===========================================================
-        // DTO → Model
-        // ===========================================================
-        public static PropertyModel ToModel(this PropertyDto dto)
+              // DTO → Model
+              public static PropertyModel ToModel(this PropertyDto dto)
         {
             var id = !string.IsNullOrEmpty(dto.IdProperty)
                 ? dto.IdProperty
@@ -65,10 +61,8 @@ namespace RealEstate.API.Modules.Property.Mapper
             => dtos?.Select(ToModel).ToList() ?? new List<PropertyModel>();
     }
 
-    // ===========================================================
-    // 🔸 Interfaz opcional para compatibilidad con modelos extendidos
-    // ===========================================================
-    public interface IPropertyWithImage
+      // 🔸 Interfaz opcional para compatibilidad con modelos extendidos
+      public interface IPropertyWithImage
     {
         PropertyImageDto? Image { get; set; }
     }

@@ -16,10 +16,8 @@ namespace RealEstate.API.Modules.Token.Controller
             _jwtService = jwtService;
         }
 
-        // ===========================================================
-        // POST: /api/token/refresh
-        // ===========================================================
-        [HttpPost("refresh")]
+              // POST: /api/token/refresh
+              [HttpPost("refresh")]
         [AllowAnonymous]
         public async Task<IActionResult> Refresh()
         {
@@ -36,10 +34,8 @@ namespace RealEstate.API.Modules.Token.Controller
             }
         }
 
-        // ===========================================================
-        // GET: /api/token/validate?token=...
-        // ===========================================================
-        [HttpGet("validate")]
+              // GET: /api/token/validate?token=...
+              [HttpGet("validate")]
         [AllowAnonymous]
         public IActionResult Validate([FromQuery] string token)
         {
