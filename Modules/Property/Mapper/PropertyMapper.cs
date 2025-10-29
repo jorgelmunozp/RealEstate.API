@@ -61,7 +61,7 @@ namespace RealEstate.API.Modules.Property.Mapper
             => dtos?.Select(ToModel).ToList() ?? new List<PropertyModel>();
     }
 
-      // 🔸 Interfaz opcional para compatibilidad con modelos extendidos
+      // Interfaz opcional para compatibilidad con modelos extendidos
       public interface IPropertyWithImage
     {
         PropertyImageDto? Image { get; set; }

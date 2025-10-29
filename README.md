@@ -38,7 +38,7 @@ flowchart LR
 
 ---
 
-### 🧱 Módulos Principales
+### Módulos Principales
 
 | Módulo | Descripción |
 |---------|--------------|
