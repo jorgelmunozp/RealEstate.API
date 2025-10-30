@@ -364,16 +364,16 @@ Ejemplo de creación (request):
   "price": 250000,
   "codeInternal": 123,
   "year": 2020,
-  "Owner": {
+  "owner": {
     "name": "Casa 123",
     "address": "Calle 1 #2-3",
     "birthday": "1970-10-10"
   },
-  "Image": {
+  "image": {
     "file": "<Imagen Base64>",
     "enabled": true,
   },
-  "Traces": [{
+  "traces": [{
     "name": "Venta",
     "datesale": "2000-01-01",
     "value": 350000000,
