@@ -125,7 +125,7 @@ namespace RealEstate.API.Modules.Owner.Service
                     updates.Add(builder.Set(prop.Name, BsonValue.Create(field.Value)));
             }
 
-            if (!updates.Any())
+            if (updates.Count == 0)
                 return ServiceResultWrapper<OwnerDto>.Fail("Sin cambios válidos para aplicar", 400);
 
             await _owners.UpdateOneAsync(o => o.Id == id, builder.Combine(updates));

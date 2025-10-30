@@ -197,13 +197,19 @@ namespace RealEstate.API.Modules.Property.Service
                 var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
                 if (existing == null)
                     return ServiceResultWrapper<PropertyDto>.Fail("Propiedad no encontrada", 404);
+                Console.WriteLine("dto.Owner 1!!!!!!!: " + dto.Owner);
 
                 if (dto.Owner != null)
                 {
                     if (string.IsNullOrWhiteSpace(dto.Owner.IdOwner))
                     {
+                        Console.WriteLine("dto.Owner 2!!!!!!!: " + dto.Owner);
+
                         var ownerCreated = await _ownerService.CreateAsync(dto.Owner);
+                        Console.WriteLine("ownerCreated.Data?.IdOwner!!!!!!!: " + ownerCreated.Data?.IdOwner);
+
                         dto.IdOwner = ownerCreated.Data?.IdOwner;
+                        Console.WriteLine("dto.IdOwner!!!!!!!: " + dto.IdOwner);
                     }
                     else
                         await _ownerService.UpdateAsync(dto.Owner.IdOwner, dto.Owner);
@@ -408,7 +414,9 @@ namespace RealEstate.API.Modules.Property.Service
                 if (ownerDto == null) return;
 
                 if (!string.IsNullOrWhiteSpace(existingIdOwner))
+                {
                     await ownerService.UpdateAsync(existingIdOwner, ownerDto);
+                }
                 else
                 {
                     var created = await ownerService.CreateAsync(ownerDto);
