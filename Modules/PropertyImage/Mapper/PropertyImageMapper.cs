@@ -25,7 +25,7 @@ namespace RealEstate.API.Modules.PropertyImage.Mapper
         {
             if (dto == null) return new PropertyImageModel();
 
-            // ⚙️ Si viene sin Id, genera uno nuevo solo en creación (no actualización)
+            // Si viene sin Id, genera uno nuevo solo en creación, no en actualización
             var id = string.IsNullOrEmpty(dto.IdPropertyImage)
                 ? ObjectId.GenerateNewId().ToString()
                 : dto.IdPropertyImage!;

@@ -1,4 +1,3 @@
-// RealEstate.API/Modules/Owner/Interface/IOwnerService.cs
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RealEstate.API.Infraestructure.Core.Services;

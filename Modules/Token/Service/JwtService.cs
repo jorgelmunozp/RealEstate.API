@@ -20,9 +20,7 @@ namespace RealEstate.API.Modules.Token.Service
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
-        // =========================================================
-        // Helper: Obtener variable desde entorno o IConfiguration
-        // =========================================================
+        // Helper: Obtiene variable desde entorno o IConfiguration
         private string GetEnv(string key, string fallback)
         {
             var fromConfig = _config[key];
@@ -32,9 +30,7 @@ namespace RealEstate.API.Modules.Token.Service
             return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : fallback;
         }
 
-        // =========================================================
-        // Generar JWT genérico
-        // =========================================================
+        // Genera JWT genérico
         private string GenerateJwtToken(UserModel user, string type, double minutes)
         {
             var secret = GetEnv("JwtSettings:SecretKey", GetEnv("JWT_SECRET", ""));
@@ -64,33 +60,25 @@ namespace RealEstate.API.Modules.Token.Service
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        // =========================================================
         // Access Token
-        // =========================================================
         public string GenerateToken(UserModel user)
         {
             double.TryParse(GetEnv("JwtSettings:ExpiryMinutes", GetEnv("JWT_EXPIRY_MINUTES", "15")), out var minutes);
             return GenerateJwtToken(user, "access", minutes > 0 ? minutes : 15);
         }
 
-        // =========================================================
         // Refresh Token
-        // =========================================================
         public string GenerateRefreshToken(UserModel user)
         {
             double.TryParse(GetEnv("JwtSettings:RefreshDays", GetEnv("JWT_REFRESH_DAYS", "7")), out var days);
             return GenerateJwtToken(user, "refresh", (days > 0 ? days : 7) * 24 * 60);
         }
 
-        // =========================================================
-        // Generar ambos tokens
-        // =========================================================
+        // Genera ambos tokens
         public (string AccessToken, string RefreshToken) GenerateTokens(UserModel user)
             => (GenerateToken(user), GenerateRefreshToken(user));
 
-        // =========================================================
-        // Validar token
-        // =========================================================
+        // Valida token
         public ClaimsPrincipal? ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token)) return null;
@@ -122,9 +110,7 @@ namespace RealEstate.API.Modules.Token.Service
             }
         }
 
-        // =========================================================
         // Lógica de Refresh Token
-        // =========================================================
         public async Task<ServiceResultWrapper<object>> ProcessRefreshTokenAsync(string authHeader)
         {
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
@@ -168,9 +154,7 @@ namespace RealEstate.API.Modules.Token.Service
             return ServiceResultWrapper<object>.Ok(response, "Token renovado correctamente");
         }
 
-        // =========================================================
         // Renovar usando refresh token válido
-        // =========================================================
         public (string AccessToken, string RefreshToken) RefreshAccessToken(string refreshToken, UserModel user)
         {
             var principal = ValidateToken(refreshToken);

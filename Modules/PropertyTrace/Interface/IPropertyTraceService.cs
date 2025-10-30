@@ -1,4 +1,3 @@
-// RealEstate.API/Modules/PropertyTrace/Interface/IPropertyTraceService.cs
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using RealEstate.API.Infraestructure.Core.Services;

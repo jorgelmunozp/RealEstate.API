@@ -33,9 +33,7 @@ namespace RealEstate.API.Modules.Auth.Service
             _userCollection = database.GetCollection<UserModel>(mongoCollectionUser);
         }
 
-        // =========================================================
         // Helper: obtener variable de entorno o IConfiguration
-        // =========================================================
         private string? GetEnv(string key, string? fallback = null)
         {
             var fromConfig = _config[key];
@@ -45,9 +43,7 @@ namespace RealEstate.API.Modules.Auth.Service
             return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : fallback;
         }
 
-        // =========================================================
         // LOGIN (autenticar usuario)
-        // =========================================================
         public async Task<ServiceLogResponseWrapper<object>> LoginAsync(LoginDto loginDto)
         {
             var validationResult = await _validator.ValidateAsync(loginDto);
@@ -73,9 +69,7 @@ namespace RealEstate.API.Modules.Auth.Service
             return ServiceLogResponseWrapper<object>.Ok(response, "Inicio de sesión exitoso", 200);
         }
 
-        // =========================================================
         // REGISTER (crear usuario nuevo)
-        // =========================================================
         public async Task<ServiceLogResponseWrapper<object>> RegisterAsync(UserDto userDto)
         {
             if (string.IsNullOrWhiteSpace(userDto.Password))

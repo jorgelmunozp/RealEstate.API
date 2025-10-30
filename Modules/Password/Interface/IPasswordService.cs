@@ -1,4 +1,3 @@
-// RealEstate.API/Modules/Password/Interface/IPasswordService.cs
 using System.Threading.Tasks;
 using RealEstate.API.Infraestructure.Core.Services;
 

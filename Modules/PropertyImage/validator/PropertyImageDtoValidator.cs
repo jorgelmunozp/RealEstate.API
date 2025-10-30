@@ -7,13 +7,13 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
     {
         public PropertyImageDtoValidator()
         {
-                      // Validación común para todas las operaciones
-                      RuleFor(p => p.Enabled)
+            // Validación común para todas las operaciones
+            RuleFor(p => p.Enabled)
                 .NotNull()
                 .WithMessage("El campo 'Enabled' no puede ser nulo.");
 
-                      // Validación específica para creación (POST)
-                      When(IsCreateOperation, () =>
+            // Validación específica para creación (POST)
+            When(IsCreateOperation, () =>
             {
                 RuleFor(p => p.File)
                     .NotEmpty()
@@ -24,8 +24,8 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
                     .WithMessage("El IdProperty es obligatorio al crear una imagen.");
             });
 
-                      // Validación específica para actualización (PUT / PATCH)
-                      When(IsUpdateOperation, () =>
+            // Validación específica para actualización (PUT / PATCH)
+            When(IsUpdateOperation, () =>
             {
                 RuleFor(p => p.IdPropertyImage)
                     .NotEmpty()
@@ -36,7 +36,7 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
                     .Must(f => string.IsNullOrEmpty(f) || f.Length > 10)
                     .WithMessage("El archivo de imagen enviado no es válido.");
 
-                // Validar IdProperty si se intenta modificar
+                // Valida IdProperty si se intenta modificar
                 RuleFor(p => p.IdProperty)
                     .MaximumLength(50)
                     .When(p => !string.IsNullOrEmpty(p.IdProperty))
@@ -44,8 +44,8 @@ namespace RealEstate.API.Modules.PropertyImage.Validator
             });
         }
 
-              // Helpers para distinguir tipo de operación
-              private static bool IsCreateOperation(PropertyImageDto dto) =>
+        // Helpers para distinguir tipo de operación
+        private static bool IsCreateOperation(PropertyImageDto dto) =>
             string.IsNullOrEmpty(dto.IdPropertyImage);
 
         private static bool IsUpdateOperation(PropertyImageDto dto) =>

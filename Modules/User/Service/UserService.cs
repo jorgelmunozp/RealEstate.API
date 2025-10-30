@@ -34,6 +34,7 @@ namespace RealEstate.API.Modules.User.Service
                 : TimeSpan.FromMinutes(5);
         }
 
+        // GetAll
         public async Task<ServiceResultWrapper<List<UserDto>>> GetAllAsync(bool refresh = false)
         {
             const string key = "user:all";
@@ -46,6 +47,7 @@ namespace RealEstate.API.Modules.User.Service
             return ServiceResultWrapper<List<UserDto>>.Ok(result, "Usuarios obtenidos correctamente");
         }
 
+        // GetByEmail
         public async Task<ServiceResultWrapper<UserDto?>> GetByEmailAsync(string email, bool refresh = false)
         {
             if (string.IsNullOrWhiteSpace(email)) return ServiceResultWrapper<UserDto?>.Fail("Email inválido");
@@ -60,6 +62,7 @@ namespace RealEstate.API.Modules.User.Service
             return ServiceResultWrapper<UserDto?>.Ok(dto, "Usuario obtenido correctamente");
         }
 
+        // GetById        
         public async Task<ServiceResultWrapper<UserDto?>> GetByIdAsync(string id, bool refresh = false)
         {
             if (string.IsNullOrWhiteSpace(id)) return ServiceResultWrapper<UserDto?>.Fail("ID inválido");
@@ -74,6 +77,7 @@ namespace RealEstate.API.Modules.User.Service
             return ServiceResultWrapper<UserDto?>.Ok(dto, "Usuario obtenido correctamente");
         }
 
+        // CreateUser    
         public async Task<ServiceResultWrapper<UserDto>> CreateUserAsync(UserDto user)
         {
             var validation = await _validator.ValidateAsync(user);
@@ -99,6 +103,7 @@ namespace RealEstate.API.Modules.User.Service
             );
         }
 
+        // UpdateUser    
         public async Task<ServiceResultWrapper<UserDto>> UpdateUserAsync(string email, UserDto user, string requesterRole)
         {
             var existing = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
@@ -141,6 +146,7 @@ namespace RealEstate.API.Modules.User.Service
             );
         }
 
+        // PatchUser 
         public async Task<ServiceResultWrapper<UserDto>> PatchUserAsync(string email, Dictionary<string, object> fields, string requesterRole)
         {
             if (fields == null || fields.Count == 0)
@@ -224,7 +230,7 @@ namespace RealEstate.API.Modules.User.Service
                 }
             }
 
-            if (!updates.Any())
+            if (updates.Count == 0)
                 return ServiceResultWrapper<UserDto>.Fail("Sin cambios válidos para aplicar");
 
             await _users.UpdateOneAsync(u => u.Id == existing.Id, builder.Combine(updates));
@@ -240,7 +246,8 @@ namespace RealEstate.API.Modules.User.Service
                 "Usuario actualizado parcialmente"
             );
         }
-
+        
+        // DeleteUser
         public async Task<ServiceResultWrapper<bool>> DeleteUserAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))

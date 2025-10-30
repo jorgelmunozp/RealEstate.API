@@ -18,10 +18,8 @@ namespace RealEstate.API.Modules.Password.Controller
             _passwordService = passwordService;
         }
 
-        // =========================================================
         // POST: api/password/recover
         // Envía un correo con el enlace de recuperación
-        // =========================================================
         [HttpPost("recover")]
         [AllowAnonymous]
         public async Task<IActionResult> Recover([FromBody] PasswordRecoverDto dto)
@@ -40,10 +38,8 @@ namespace RealEstate.API.Modules.Password.Controller
             }
         }
 
-        // =========================================================
         // GET: api/password/reset/{token}
         // Verifica si el token de recuperación es válido
-        // =========================================================
         [HttpGet("reset/{token}")]
         [AllowAnonymous]
         public IActionResult VerifyToken(string token)
@@ -62,10 +58,8 @@ namespace RealEstate.API.Modules.Password.Controller
             }
         }
 
-        // =========================================================
         // PATCH: api/password/update
         // Cambia la contraseña del usuario tras verificar el token
-        // =========================================================
         [HttpPatch("update")]
         [AllowAnonymous]
         public async Task<IActionResult> Update([FromBody] PasswordUpdateDto dto)
@@ -75,7 +69,7 @@ namespace RealEstate.API.Modules.Password.Controller
 
             try
             {
-                // Verificamos el token usando PasswordService (internamente usa JwtService)
+                // Verifica el token usando PasswordService (internamente usa JwtService)
                 var verified = _passwordService.VerifyResetToken(dto.Token) as dynamic;
                 string id = verified.id;
 

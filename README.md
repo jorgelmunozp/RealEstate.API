@@ -152,9 +152,15 @@ Estandariza todas las respuestas del backend:
 
 ### `LoggingMiddleware`
 Registra cada request con método, endpoint, tiempo de ejecución y estado HTTP.
+- Maneja el formato Hall:
+ #### "HALL Request: [{Method}] {Url} (PropertyId: {PropertyId}) Body: {Body}",
+
 
 ### `ErrorHandlerMiddleware`
 Captura excepciones globales y las transforma en una respuesta JSON clara.
+- Maneja el formato Hall:
+ #### "[HALL] ErrorHandler => {StatusCode} {Method} {Path} ({ExceptionType})",
+
 
 ---
 
@@ -479,7 +485,6 @@ Recomendaciones de TTL:
 - Logging: request/response con tiempos y cuerpos (POST/PUT/PATCH).
 - Errores: captura global y respuesta unificada (wrapper).
 - StatusCodePages: wrapper también para 404/405/415.
-
 ---
 
 ## Integración Cliente (Axios)

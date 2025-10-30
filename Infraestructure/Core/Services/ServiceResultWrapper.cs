@@ -13,7 +13,7 @@ namespace RealEstate.API.Infraestructure.Core.Services
         [JsonPropertyName("data")] public T? Data { get; }
         [JsonPropertyName("errors")] public IReadOnlyList<string>? Errors { get; }
 
-        // usa nombres de parámetros en camelCase y asigna a las propiedades
+        // Usa nombres de parámetros en camelCase y asigna a las propiedades
         public ServiceResultWrapper(bool success, int statusCode, T? data = default, string message = "", IReadOnlyList<string>? errors = null)
         {
             Success = success;
