@@ -81,13 +81,18 @@ namespace RealEstate.API.Modules.Auth.Service
                 );
             }
 
+            Console.WriteLine("userDto!!!!!!!!!!!!!!: ", userDto);
+            Console.WriteLine("userDto.Email!!!!!!!!!!!!!!!: ",userDto.Email);
+
             var existingUser = await _userService.GetByEmailAsync(userDto.Email);
-            if (existingUser != null)
+            Console.WriteLine("existingUser!!!!!!!!!!!!!!!: ",existingUser);
+
+            if (!string.IsNullOrWhiteSpace(existingUser?.Data?.Email))
             {
                 return ServiceLogResponseWrapper<object>.Fail(
                     "El correo electrónico ya está registrado",
-                    new List<string> { "Email duplicado" },
-                    400
+                    new List<string> { "Email ya registrado" },
+                    400 
                 );
             }
 

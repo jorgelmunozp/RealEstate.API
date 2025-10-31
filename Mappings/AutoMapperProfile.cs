@@ -25,37 +25,46 @@ using RealEstate.API.Modules.Auth.Dto;
 
 namespace RealEstate.API.Mappings
 {
-    public class MappingProfile : Profile
+    public class AutoMapperProfile : Profile
     {
-        public MappingProfile()
+        public AutoMapperProfile()
         {
-            // Property
+            // PROPERTY
             CreateMap<PropertyModel, PropertyDto>()
                 .ReverseMap()
-                .ForMember(dest => dest.Id, opt => opt.Ignore());
+                .ForMember(dest => dest.Id, opt => opt.Ignore()); // el Id de Mongo no se toca
 
-            // Owner
+            // OWNER
+            // Model -> DTO: Id → IdOwner
             CreateMap<OwnerModel, OwnerDto>()
-                .ReverseMap()
+                .ForMember(dest => dest.IdOwner, opt => opt.MapFrom(src => src.Id));
+            // DTO -> Model: NO toques el Id, se queda el de Mongo
+            CreateMap<OwnerDto, OwnerModel>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
 
-            // Property Image
+            // PROPERTY IMAGE
+            // Model -> DTO: Id → IdPropertyImage
             CreateMap<PropertyImageModel, PropertyImageDto>()
-                .ReverseMap()
+                .ForMember(dest => dest.IdPropertyImage, opt => opt.MapFrom(src => src.Id));
+            // DTO -> Model: NO toques el Id
+            CreateMap<PropertyImageDto, PropertyImageModel>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
 
-            // Property Trace
+            // PROPERTY TRACE
+            // Model -> DTO: Id → IdPropertyTrace
             CreateMap<PropertyTraceModel, PropertyTraceDto>()
-                .ReverseMap()
+                .ForMember(dest => dest.IdPropertyTrace, opt => opt.MapFrom(src => src.Id));
+            // DTO -> Model: NO toques el Id
+            CreateMap<PropertyTraceDto, PropertyTraceModel>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
 
-            // User
+            // USER
             CreateMap<UserModel, UserDto>()
                 .ReverseMap()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.Password, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.Password)));
 
-            // Auth / Login
+            // AUTH / LOGIN
             CreateMap<LoginDto, UserModel>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.Password, opt => opt.MapFrom(src => src.Password));

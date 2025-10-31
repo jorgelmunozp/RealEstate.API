@@ -6,7 +6,6 @@ using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.PropertyImage.Dto;
 using RealEstate.API.Modules.PropertyImage.Model;
 using RealEstate.API.Modules.PropertyImage.Interface;
-using RealEstate.API.Modules.PropertyImage.Mapper;
 
 namespace RealEstate.API.Modules.PropertyImage.Service
 {
@@ -80,8 +79,7 @@ namespace RealEstate.API.Modules.PropertyImage.Service
         public async Task<PropertyImageDto?> GetByPropertyIdAsync(string propertyId)
         {
             var image = await _images.Find(i => i.IdProperty == propertyId).FirstOrDefaultAsync();
-            // return image != null ? _mapper.Map<PropertyImageDto>(image) : null;
-            return image?.ToDto();
+            return image != null ? _mapper.Map<PropertyImageDto>(image) : null;
         }
         
         // CREATE

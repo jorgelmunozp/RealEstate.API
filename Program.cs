@@ -156,7 +156,7 @@ builder.Services.AddScoped<IPropertyService, PropertyService>();
 // ===========================================================
 // AUTOMAPPER (perfil de mapeos globales)
 // ===========================================================
-builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile).Assembly);
 
 // ===========================================================
 // CORS

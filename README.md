@@ -105,7 +105,7 @@ RealEstate.API/
 │   ├── LoggingMiddleware.cs
 │   ├── ErrorHandlerMiddleware.cs
 ├── Mappings/
-│   └── MappingProfile.cs
+│   └── AutoMapperProfile.cs
 ├── Program.cs
 └── README.md
 ```

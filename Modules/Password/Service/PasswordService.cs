@@ -4,7 +4,6 @@ using RealEstate.API.Infraestructure.Core.Services;
 using RealEstate.API.Modules.Password.Interface;
 using RealEstate.API.Modules.User.Model;
 using RealEstate.API.Modules.Token.Interface;
-using RealEstate.API.Modules.User.Interface;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Mail;
