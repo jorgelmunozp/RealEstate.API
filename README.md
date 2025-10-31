@@ -6,6 +6,8 @@
 ![JWT](https://img.shields.io/badge/Auth-JWT-orange?logo=jsonwebtokens)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
+## Backend
+
 RealEstate.API es una solución modular de software para gestión inmobiliaria basada en ASP.NET Core 9 + React + MongoDB Atlas, con arquitectura limpia, validaciones centralizadas, autenticación JWT y respuesta unificada de servicios.
 
 ---
