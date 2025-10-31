@@ -4,7 +4,6 @@
 ![React](https://img.shields.io/badge/Frontend-React-blue?logo=react)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?logo=mongodb)
 ![JWT](https://img.shields.io/badge/Auth-JWT-orange?logo=jsonwebtokens)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ## Backend
 
@@ -602,6 +601,65 @@ Notas operativas
 
 - TLS/SSL: SRV (Atlas) ya usa TLS; para `mongodb://` on-prem, habilitar TLS según tu despliegue.
 
+
+## Contenerización y despliegue con Docker / Docker Hub / Render
+
+Este backend está diseñado para ejecutarse dentro de un contenedor Docker y publicarse en un registro remoto (Docker Hub) para luego ser consumido por una plataforma cloud como Render.
+
+### 1. Generar la imagen Docker local
+
+En la raíz del proyecto existe un `Dockerfile` (para .NET):
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet restore
+RUN dotnet publish -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "RealEstate.API.dll"]
+```
+
+Para construir la imagen localmente:
+
+```bash
+docker build compose build
+docker build compose up -d
+```
+
+> Esto crea una imagen llamada `realestate-api` usando el `Dockerfile` del proyecto en el Docker local.
+
+### 2. Etiquetar la imagen para Docker Hub
+
+Docker Hub necesita que la imagen tenga el nombre completo: `usuario/repositorio:tag`
+
+```bash
+docker tag realestate-api usuario/realestate-api:latest
+```
+
+### 3. Subir la imagen a Docker Hub
+
+```bash
+docker push usuario/realestate-api:latest
+```
+
+### 4. Despliegue en Render usando la imagen de Docker Hub
+
+En Render se despliega la API usando directamente la imagen de Docker Hub.
+
+1. En Render, se crea un nuevo Web Service.
+2. Se elige Deploy an existing image.
+3. En “Image URL” se coloca la imagen de Docker Hub:
+   - `docker.io/usuario/realestate-api:latest`
+4. Se agregan las variables de entorno y se levanta el servicio.
+
 ---
 
 ## Pruebas Unitarias
@@ -628,15 +686,7 @@ public async Task Login_ShouldReturnToken_WhenCredentialsValid()
 
 ---
 
-## Licencia
-
-Este proyecto se distribuye bajo licencia **MIT**.  
-Puedes usarlo, modificarlo y redistribuirlo libremente con atribución.
-
----
-
 ## Autor
 
-**Jorge Luis Muñoz Pabón**  
-Full Stack Developer – .NET · React · MongoDB  
-[GitHub: @jorgelmunozp](https://github.com/jorgelmunozp)
+**Jorge Luis Muñoz**  
+Backend API REST – .NET · MongoDB · Docker · Render     
