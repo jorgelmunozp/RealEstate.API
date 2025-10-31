@@ -263,14 +263,14 @@ npm run dev
 
 ```mermaid
 graph TD
-  F[Frontend React] -->|Axios| C[Controller .NET]
-  C --> V[Validator (FluentValidation)]
-  V --> M[Mapper (AutoMapper)]
-  M --> S[Service]
-  S --> DB[(MongoDB Atlas)]
-  S --> Cache[IMemoryCache]
-  S --> JWT[JwtService]
-  C -->|Wrapper JSON (camelCase)| R[Response]
+  F["Frontend React"] -->|Axios| C["Controller .NET"]
+  C --> V["Validator (FluentValidation)"]
+  V --> M["Mapper (AutoMapper)"]
+  M --> S["Service"]
+  S --> DB[("MongoDB Atlas")]
+  S --> Cache["IMemoryCache"]
+  S --> JWT["JwtService"]
+  C -->|"Wrapper JSON (camelCase)"| R["Response"]
 ```
 
 ---
