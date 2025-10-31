@@ -1,0 +1,14 @@
+services:
+  # BACKEND API - RealEstate.API (.NET 9)
+  api:
+    build: .
+    container_name: realestate_api
+    restart: always
+    ports:
+      - "5235:5235"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:5235
+      - DOTNET_ENVIRONMENT=Production
+      - MONGO_CONNECTION=mongodb+srv://root:root123@cluster0.zashlwo.mongodb.net/
