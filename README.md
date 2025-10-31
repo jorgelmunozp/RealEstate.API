@@ -13,17 +13,17 @@ RealEstate.API es una solución modular de software para gestión inmobiliaria b
 
 ## Descripción General
 
-Sistema completo para **administrar propiedades, dueños, imágenes y trazas de historial** dentro de un ecosistema seguro y escalable.  
+Sistema completo para administrar propiedades, dueños, imágenes y trazas de historial dentro de un ecosistema seguro y escalable.  
 Integra frontend y backend de forma desacoplada, con:
 
-- **API REST modular**
-- **Frontend React + Redux Toolkit**
-- **MongoDB Atlas** como base de datos principal
-- **JWT Authentication** + Refresh Tokens
-- **FluentValidation + AutoMapper**
-- **IMemoryCache** con TTL configurable
-- **ServiceResultWrapper<T>** para respuestas estandarizadas
-- **Middlewares** personalizados de logging y errores
+- API REST modular
+- Frontend React + Redux Toolkit
+- MongoDB Atlas como base de datos principal
+- JWT Authentication + Refresh Tokens
+- FluentValidation + AutoMapper
+- IMemoryCache con TTL configurable
+- ServiceResultWrapper<T> para respuestas estandarizadas
+- Middlewares personalizados de logging y errores
 
 ---
 
@@ -152,14 +152,12 @@ Estandariza todas las respuestas del backend:
 ```
 
 ### `LoggingMiddleware`
-Registra cada request con método, endpoint, tiempo de ejecución y estado HTTP.
-- Maneja el formato Hall:
+Registra cada request con método, endpoint, tiempo de ejecución y estado HTTP en formato Hall:
  #### "HALL Request: [{Method}] {Url} (PropertyId: {PropertyId}) Body: {Body}",
 
 
 ### `ErrorHandlerMiddleware`
-Captura excepciones globales y las transforma en una respuesta JSON clara.
-- Maneja el formato Hall:
+Captura excepciones globales y las transforma en una respuesta JSON clara en formato Hall:
  #### "[HALL] ErrorHandler => {StatusCode} {Method} {Path} ({ExceptionType})",
 
 
@@ -167,7 +165,7 @@ Captura excepciones globales y las transforma en una respuesta JSON clara.
 
 ## Autenticación y Autorización (JWT)
 
-- **JwtService** genera tokens de acceso y refresh.
+- JwtService genera tokens de acceso y refresh.
 - Tokens incluyen claims: `sub`, `email`, `role`.
 - Roles disponibles:  
   - `user` — acceso básico  
@@ -234,7 +232,7 @@ SMTP_PASS=xxxxxxxxxxxx
 
 ## Seguridad
 
-- Contraseñas hasheadas con **BCrypt.Net**
+- Contraseñas hasheadas con BCrypt.Net
 - Tokens JWT firmados con clave simétrica (`JWT_SECRET`)
 - CORS “AllowAll” solo en desarrollo
 - Compatible con HTTPS y TLS (Atlas SRV)
@@ -352,7 +350,7 @@ Acceso por defecto:
 ### Property
 - `GET /api/property?name&address&idOwner&minPrice&maxPrice&page=1&limit=6&refresh=false`
 - `GET /api/property/{id}`
-- `POST /api/property` (JSON) → 201 Created con wrapper
+- `POST /api/property`
 - `PATCH /api/property/{id}`
 - `DELETE /api/property/{id}`
 
@@ -495,10 +493,9 @@ Recomendaciones de TTL:
 
 ---
 
-## Notas de Seguridad
+## Notas
 
 - CORS "AllowAll" solo para desarrollo. En producción usar `WithOrigins`/dominios permitidos.
-- No publicar `.env` con secretos reales. Usar `.env.example` y variables de entorno seguras.
 
 ---
 
