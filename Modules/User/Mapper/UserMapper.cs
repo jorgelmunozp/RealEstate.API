@@ -40,7 +40,6 @@ namespace RealEstate.API.Modules.User.Mapper
                 // Como el servicio ya encripta se pasa plano
                 Password = dto.Password ?? string.Empty,
                 Role = dto.Role ?? "user",
-                CreatedAt = DateTime.UtcNow
             };
         }
 

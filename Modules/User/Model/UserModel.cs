@@ -30,14 +30,5 @@ namespace RealEstate.API.Modules.User.Model
       [BsonElement("Role")]
         [BsonIgnoreIfNull]
         public string Role { get; set; } = "user";
-
-      // Metadatos (opcional para auditoría o trazabilidad)
-      [BsonElement("CreatedAt")]
-        [BsonIgnoreIfNull]
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [BsonElement("UpdatedAt")]
-        [BsonIgnoreIfNull]
-        public DateTime? UpdatedAt { get; set; }
     }
 }
