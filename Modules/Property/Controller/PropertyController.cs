@@ -60,7 +60,10 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Update(string id, [FromBody] PropertyDto dto)
         {
             if (string.IsNullOrWhiteSpace(id))
-                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio." });
+                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio" });
+
+            if (dto == null)
+                return BadRequest(new { Success = false, Message = "No se enviaron campos válidos para actualizar" });
 
             var result = await _service.UpdateAsync(id, dto);
             return StatusCode(result.StatusCode, result);
@@ -72,10 +75,10 @@ namespace RealEstate.API.Modules.Property.Controller
         public async Task<IActionResult> Patch(string id, [FromBody] Dictionary<string, object> fields)
         {
             if (string.IsNullOrWhiteSpace(id))
-                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio." });
+                return BadRequest(new { Success = false, Message = "El parámetro 'id' es obligatorio" });
 
             if (fields == null || fields.Count == 0)
-                return BadRequest(new { Success = false, Message = "No se enviaron campos válidos para actualizar." });
+                return BadRequest(new { Success = false, Message = "No se enviaron campos válidos para actualizar" });
 
             var result = await _service.PatchAsync(id, fields);
             return StatusCode(result.StatusCode, result);

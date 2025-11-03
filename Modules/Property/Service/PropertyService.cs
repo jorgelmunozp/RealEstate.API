@@ -185,7 +185,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // UPDATE (PUT)
+        // UPDATE (PUT modular, delegando a servicios)
         public async Task<ServiceResultWrapper<PropertyDto>> UpdateAsync(string id, PropertyDto dto)
         {
             try
@@ -197,18 +197,23 @@ namespace RealEstate.API.Modules.Property.Service
                 var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
                 if (existing == null)
                     return ServiceResultWrapper<PropertyDto>.Fail("Propiedad no encontrada", 404);
-                
+
+                // Owner: actualiza o crea y sincroniza IdOwner en dto
                 if (dto.Owner != null)
                 {
-                    if (string.IsNullOrWhiteSpace(dto.Owner.IdOwner))
+                    if (!string.IsNullOrWhiteSpace(dto.Owner.IdOwner))
+                    {
+                        await _ownerService.UpdateAsync(dto.Owner.IdOwner, dto.Owner);
+                        dto.IdOwner = dto.Owner.IdOwner; // asegura consistencia
+                    }
+                    else
                     {
                         var ownerCreated = await _ownerService.CreateAsync(dto.Owner);
                         dto.IdOwner = ownerCreated.Data?.IdOwner;
                     }
-                    else
-                        await _ownerService.UpdateAsync(dto.Owner.IdOwner, dto.Owner);
                 }
 
+                // Propiedad base
                 existing.Name = dto.Name;
                 existing.Address = dto.Address;
                 existing.Price = dto.Price;
@@ -218,20 +223,26 @@ namespace RealEstate.API.Modules.Property.Service
 
                 await _properties.ReplaceOneAsync(p => p.Id == id, existing);
 
-                if (dto.Image != null && !string.IsNullOrWhiteSpace(dto.Image.File))
+                // Imagen: upsert por IdProperty
+                if (dto.Image != null)
                 {
                     var existingImage = await _imageService.GetByPropertyIdAsync(id);
                     if (existingImage != null)
+                    {
                         await _imageService.UpdateAsync(existingImage.IdPropertyImage!, dto.Image);
-                    else
+                    }
+                    else if (!string.IsNullOrWhiteSpace(dto.Image.File))
+                    {
                         await _imageService.CreateAsync(new PropertyImageDto
                         {
                             IdProperty = id,
                             File = dto.Image.File,
                             Enabled = dto.Image.Enabled
                         });
+                    }
                 }
 
+                // Traces: crea si no tiene Id, actualiza si tiene
                 if (dto.Traces?.Any() == true)
                 {
                     var traceTasks = dto.Traces.Select(async trace =>
@@ -243,7 +254,9 @@ namespace RealEstate.API.Modules.Property.Service
                             await _traceService.CreateAsync(new List<PropertyTraceDto> { trace });
                         }
                         else
+                        {
                             await _traceService.UpdateAsync(trace.IdPropertyTrace, trace);
+                        }
                     });
                     await Task.WhenAll(traceTasks);
                 }
@@ -257,7 +270,7 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // PATCH (modular, delegando a servicios)
+        // Update (PATCH modular, delegando a servicios)
         public async Task<ServiceResultWrapper<PropertyDto>> PatchAsync(string id, Dictionary<string, object> fields)
         {
             try
@@ -302,16 +315,22 @@ namespace RealEstate.API.Modules.Property.Service
             }
         }
 
-        // DELETE
+        // DELETE (modular, delegando a servicios)
         public async Task<ServiceResultWrapper<bool>> DeleteAsync(string id)
         {
             try
             {
-                var deleteProperty = _properties.DeleteOneAsync(p => p.Id == id);
-                var deleteImages = _images.DeleteManyAsync(i => i.IdProperty == id);
-                var deleteTraces = _traces.DeleteManyAsync(t => t.IdProperty == id);
 
-                await Task.WhenAll(deleteProperty, deleteImages, deleteTraces);
+                var existing = await _properties.Find(p => p.Id == id).FirstOrDefaultAsync();
+                if (existing == null)
+                    return ServiceResultWrapper<bool>.Fail("Propiedad no encontrada", 404);
+            
+                var deleteImages = _images.DeleteOneAsync(i => i.IdProperty == id);
+                var deleteTraces = _traces.DeleteManyAsync(t => t.IdProperty == id);
+                var deleteOwner = _ownerService.DeleteAsync(existing.IdOwner);
+                var deleteProperty = _properties.DeleteOneAsync(p => p.Id == id);
+
+                await Task.WhenAll(deleteProperty, deleteOwner, deleteImages, deleteTraces);
 
                 if (deleteProperty.Result.DeletedCount == 0)
                     return ServiceResultWrapper<bool>.Fail("Propiedad no encontrada", 404);
@@ -356,7 +375,7 @@ namespace RealEstate.API.Modules.Property.Service
 
                 if (ownerTask.Result != null) dto.Owner = OwnerMapper.ToDto(ownerTask.Result);
                 if (imageTask.Result != null) dto.Image = PropertyImageMapper.ToDto(imageTask.Result);
-                if (tracesTask.Result.Any()) dto.Traces = tracesTask.Result.Select(PropertyTraceMapper.ToDto).ToList();
+                if (tracesTask.Result.Count != 0) dto.Traces = tracesTask.Result.Select(PropertyTraceMapper.ToDto).ToList();
 
                 return dto;
             });
@@ -402,21 +421,31 @@ namespace RealEstate.API.Modules.Property.Service
             public static async Task ProcessOwnerPatchAsync(object ownerObj, string? existingIdOwner, string propertyId, IOwnerService ownerService, IMongoCollection<PropertyModel> propertyCollection)
             {
                 var ownerDict = NormalizeValue(ownerObj) as Dictionary<string, object>;
-                if (ownerDict == null) return;
+                if (ownerDict == null || ownerDict.Count == 0) return;
 
-                var ownerDto = JsonSerializer.Deserialize<OwnerDto>(JsonSerializer.Serialize(ownerDict));
-                if (ownerDto == null) return;
+                if (string.IsNullOrWhiteSpace(existingIdOwner))
+                {
+                    // CREATE y setea IdOwner en la propiedad
+                    var dto = JsonSerializer.Deserialize<OwnerDto>(JsonSerializer.Serialize(ownerDict));
+                    if (dto == null) return;
 
-                if (!string.IsNullOrWhiteSpace(existingIdOwner))
-                {
-                    await ownerService.UpdateAsync(existingIdOwner, ownerDto);
+                    var created = await ownerService.CreateAsync(dto);
+                    var newOwnerId = created.Data?.IdOwner;
+                    if (!string.IsNullOrWhiteSpace(newOwnerId))
+                    {
+                        var upd = Builders<PropertyModel>.Update.Set(p => p.IdOwner, newOwnerId);
+                        await propertyCollection.UpdateOneAsync(p => p.Id == propertyId, upd);
+                    }
+                    return;
                 }
-                else
-                {
-                    var created = await ownerService.CreateAsync(ownerDto);
-                    var builder = Builders<PropertyModel>.Update.Set(p => p.IdOwner, created.Data!.IdOwner);
-                    await propertyCollection.UpdateOneAsync(p => p.Id == propertyId, builder);
-                }
+
+                // PATCH existente (no permitir cambiar IDs)
+                foreach (var k in ownerDict.Keys.ToList())
+                    if (string.Equals(k, "Id", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(k, "IdOwner", StringComparison.OrdinalIgnoreCase))
+                        ownerDict.Remove(k);
+
+                await ownerService.PatchAsync(existingIdOwner, ownerDict);
             }
 
             public static async Task ProcessImagePatchAsync(object imageObj, string propertyId, IPropertyImageService imageService)
